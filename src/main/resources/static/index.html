@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Criati Engine</title>
+</head>
+<body>
+    <h1>Criati Engine - Teste PDF</h1>
+
+    <input type="file" id="arquivo" accept="application/pdf">
+    <button onclick="enviarPdf()">Extrair Texto</button>
+
+    <h3>Resultado:</h3>
+    <pre id="resultado"></pre>
+
+    <script>
+        async function enviarPdf() {
+            const arquivo = document.getElementById("arquivo").files[0];
+
+            if (!arquivo) {
+                alert("Selecione um PDF primeiro.");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("arquivo", arquivo);
+
+            const resposta = await fetch("/engine/extrato-investimento", {
+                method: "POST",
+                body: formData
+            });
+
+            const dados = await resposta.json();
+
+            document.getElementById("resultado").textContent =
+                JSON.stringify(dados, null, 2);
+        }
+    </script>
+</body>
+</html>
