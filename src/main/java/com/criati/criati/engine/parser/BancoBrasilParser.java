@@ -1,5 +1,7 @@
 package com.criati.criati.engine.parser;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,54 +24,96 @@ public class BancoBrasilParser implements DocumentoParser {
 
     @Override
     public ExtratoInvestimento processar(DocumentoContexto contexto) {
-        String texto = contexto.getTexto();
+        List<ExtratoInvestimento> lista = processarTodos(contexto);
 
-        ExtratoInvestimento extrato = new ExtratoInvestimento();
-
-        extrato.setInstituicao("BB");
-        extrato.setConta(extrair(texto, "Conta\\s+(\\d{4,6}-\\d)"));
-        extrato.setCompetencia(extrairCompetencia(texto));
-
-        String bloco = extrairPrimeiroBlocoFundo(texto);
-
-        if (bloco == null) {
-            bloco = texto;
+        if (lista.isEmpty()) {
+            return new ExtratoInvestimento();
         }
 
-        extrato.setNomeFundo(extrair(bloco, "(BB\\s+.*?)-\\s+CNPJ:"));
-        extrato.setCnpjFundo(extrair(bloco, "CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
-
-        extrato.setSaldoInicial(extrair(bloco, "SALDO\\s+ANTERIOR\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
-        extrato.setAplicacoes(extrair(bloco, "APLICAÇÕES\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
-        extrato.setResgates(extrair(bloco, "RESGATES\\s*\\(-\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
-        extrato.setRendimentos(extrair(bloco, "RENDIMENTO\\s+BRUTO\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
-        extrato.setSaldoFinal(extrair(bloco, "SALDO\\s+ATUAL\\s*=\\s*([\\-]?[0-9\\.]+,[0-9]{2})"));
-
-        extrato.setRentabilidadeMes(extrair(bloco, "No\\s+mês\\s+([\\-]?[0-9]+,[0-9]+)"));
-        extrato.setRentabilidadeAno(extrair(bloco, "No\\s+ano\\s+([\\-]?[0-9]+,[0-9]+)"));
-        extrato.setRentabilidade12Meses(extrair(bloco, "Últimos\\s+12\\s+meses\\s+([\\-]?[0-9]+,[0-9]+)"));
-
-        return extrato;
+        return lista.get(0);
     }
 
-    private String extrairPrimeiroBlocoFundo(String texto) {
+    public List<ExtratoInvestimento> processarTodos(DocumentoContexto contexto) {
+        String texto = normalizar(contexto.getTexto());
+
+        String conta = extrair(texto, "Conta\\s+(\\d{4,6}-[\\dXx])");
+        String competencia = extrairCompetencia(texto);
+
+        List<String> blocos = extrairBlocosFundos(texto);
+        List<ExtratoInvestimento> extratos = new ArrayList<>();
+
+        for (String bloco : blocos) {
+            ExtratoInvestimento extrato = new ExtratoInvestimento();
+
+            extrato.setInstituicao("BB");
+            extrato.setConta(conta);
+            extrato.setCompetencia(competencia);
+
+            extrato.setNomeFundo(limpar(extrair(bloco,
+                    "(BB\\s+.*?)-\\s+CNPJ:")));
+
+            extrato.setCnpjFundo(extrair(bloco,
+                    "CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
+
+            extrato.setSaldoInicial(extrair(bloco,
+                    "SALDO\\s+ANTERIOR\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+            extrato.setAplicacoes(extrair(bloco,
+                    "APLICAÇÕES\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+            extrato.setResgates(extrair(bloco,
+                    "RESGATES\\s*\\(-\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+            extrato.setRendimentos(extrair(bloco,
+                    "RENDIMENTO\\s+BRUTO\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+            extrato.setSaldoFinal(extrair(bloco,
+                    "SALDO\\s+ATUAL\\s*=\\s*([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+            extrato.setRentabilidadeMes(extrair(bloco,
+                    "No\\s+m[eê]s\\s+([\\-]?[0-9]+,[0-9]+)"));
+
+            extrato.setRentabilidadeAno(extrair(bloco,
+                    "No\\s+ano\\s+([\\-]?[0-9]+,[0-9]+)"));
+
+            extrato.setRentabilidade12Meses(extrair(bloco,
+                    "Últimos\\s+12\\s+meses\\s+([\\-]?[0-9]+,[0-9]+)"));
+
+            extratos.add(extrato);
+        }
+
+        return extratos;
+    }
+
+    private List<String> extrairBlocosFundos(String texto) {
+        List<Integer> inicios = new ArrayList<>();
+
         Pattern pattern = Pattern.compile(
-                "(BB\\s+.*?-\\s+CNPJ:\\s*\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}.*?)(?=\\nBB\\s+.*?-\\s+CNPJ:|Transação efetuada|Serviço de Atendimento|$)",
+                "BB\\s+.*?\\s*-\\s*CNPJ:\\s*\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}",
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
 
-        if (matcher.find()) {
-            return matcher.group(1);
+        while (matcher.find()) {
+            inicios.add(matcher.start());
         }
 
-        return null;
+        List<String> blocos = new ArrayList<>();
+
+        for (int i = 0; i < inicios.size(); i++) {
+            int inicio = inicios.get(i);
+            int fim = (i + 1 < inicios.size()) ? inicios.get(i + 1) : texto.length();
+
+            blocos.add(texto.substring(inicio, fim));
+        }
+
+        return blocos;
     }
 
     private String extrairCompetencia(String texto) {
         Pattern pattern = Pattern.compile(
-                "Mês/ano\\s+referência\\s+([A-Za-zçÇ]+)/?(20\\d{2})",
+                "M[eê]s/ano\\s+referência\\s+([A-Za-zçÇ]+)/?(20\\d{2})",
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
         );
 
@@ -102,13 +146,34 @@ public class BancoBrasilParser implements DocumentoParser {
     }
 
     private String extrair(String texto, String regex) {
-        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        Pattern pattern = Pattern.compile(
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
         Matcher matcher = pattern.matcher(texto);
 
         if (matcher.find()) {
-            return matcher.group(1).trim().replaceAll("\\s+", " ");
+            return limpar(matcher.group(1));
         }
 
         return null;
+    }
+
+    private String normalizar(String valor) {
+        if (valor == null) return "";
+
+        return valor
+                .replace("\u00A0", " ")
+                .replace("\r", "\n");
+    }
+
+    private String limpar(String valor) {
+        if (valor == null) return null;
+
+        return valor
+                .replace("\u00A0", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 }
