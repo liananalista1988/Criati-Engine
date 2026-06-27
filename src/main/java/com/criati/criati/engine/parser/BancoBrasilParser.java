@@ -49,11 +49,13 @@ public class BancoBrasilParser implements DocumentoParser {
             extrato.setConta(conta);
             extrato.setCompetencia(competencia);
 
-            extrato.setNomeFundo(limpar(extrair(bloco,
-                    "(BB\\s+.*?)-\\s+CNPJ:")));
+            String nomeOriginal = extrair(bloco,
+                    "^\\s*(.*?)\\s*-\\s*CNPJ:");
+
+            extrato.setNomeFundo(padronizarNomeFundo(nomeOriginal));
 
             extrato.setCnpjFundo(extrair(bloco,
-                    "CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
+                    "CNPJ:\\s*(\\d{1,2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
 
             extrato.setSaldoInicial(extrair(bloco,
                     "SALDO\\s+ANTERIOR\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
@@ -65,7 +67,7 @@ public class BancoBrasilParser implements DocumentoParser {
                     "RESGATES\\s*\\(-\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
             extrato.setRendimentos(extrair(bloco,
-                    "RENDIMENTO\\s+BRUTO\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+                    "RENDIMENTO\\s+BRUTO\\s*\\([\\+\\-]\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
             extrato.setSaldoFinal(extrair(bloco,
                     "SALDO\\s+ATUAL\\s*=\\s*([\\-]?[0-9\\.]+,[0-9]{2})"));
@@ -89,8 +91,8 @@ public class BancoBrasilParser implements DocumentoParser {
         List<Integer> inicios = new ArrayList<>();
 
         Pattern pattern = Pattern.compile(
-                "BB\\s+.*?\\s*-\\s*CNPJ:\\s*\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                "(?m)^\\s*[^\\n]+?\\s*-\\s*CNPJ:\\s*\\d{1,2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}",
+                Pattern.CASE_INSENSITIVE
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -126,6 +128,52 @@ public class BancoBrasilParser implements DocumentoParser {
         return null;
     }
 
+    private String padronizarNomeFundo(String nome) {
+        String n = limpar(nome);
+
+        if (n == null) return null;
+
+        String u = n.toUpperCase();
+
+        if (u.equals("INSTITUCIONAL RF")) {
+            return "BB INSTITUCIONAL RF";
+        }
+
+        if (u.equals("PREVID RF IMA-B 5")) {
+            return "BB PREVID RF IMA-B5";
+        }
+
+        if (u.equals("BB PREVID RF IMA-B")) {
+            return "BB IMA-B RF";
+        }
+
+        if (u.equals("AÇÕES SELEÇÃO FATOR")) {
+            return "BB AÇÕES SELEÇÃO FATOR";
+        }
+
+        if (u.equals("MM JUROS E MOEDAS")) {
+            return "BB MM JUROS E MOEDAS";
+        }
+
+        if (u.equals("AÇÕES DIVIDENDOS MIDCAPS")) {
+            return "BB AÇÕES DIVIDENDOS MIDCAPS";
+        }
+
+        if (u.equals("AÇÕES BOLSA AMERICAN") || u.equals("AÇÕES BOLSA AMERICANA")) {
+            return "BB AÇÕES BOLSA AMERICANA";
+        }
+
+        if (u.equals("AÇÕES GLOBAIS ATIVO")) {
+            return "BB AÇÕES GLOBAIS ATIVO";
+        }
+
+        if (!u.startsWith("BB ")) {
+            return "BB " + n;
+        }
+
+        return n;
+    }
+
     private String mesPorExtenso(String mes) {
         String m = mes.toUpperCase();
 
@@ -148,7 +196,7 @@ public class BancoBrasilParser implements DocumentoParser {
     private String extrair(String texto, String regex) {
         Pattern pattern = Pattern.compile(
                 regex,
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE
         );
 
         Matcher matcher = pattern.matcher(texto);
