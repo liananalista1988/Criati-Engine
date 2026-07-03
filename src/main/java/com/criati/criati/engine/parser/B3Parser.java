@@ -133,6 +133,8 @@ public class B3Parser implements DocumentoParser {
         if (m.contains("DEZEMBRO")) return "12";
 
         return null;
+        
+        
     }
 
     private String extrair(String texto, String regex) {
