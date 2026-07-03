@@ -32,16 +32,25 @@ public class B3Parser implements DocumentoParser {
         extrato.setConta("B3");
 
         extrato.setCompetencia(extrairCompetencia(texto));
-
         extrato.setNomeFundo(extrairNomeFundo(texto));
         extrato.setCnpjFundo(null);
 
-        extrato.setAdministrador(extrair(texto, "(BB\\s+BANCO\\s+DE\\s+INVESTIMENTO\\s+S/A)"));
+        extrato.setAdministrador(
+                extrair(texto, "(BB\\s+BANCO\\s+DE\\s+INVESTIMENTO\\s+S/A)")
+        );
+
+        String movimentacao = extrairMovimentacao(texto);
 
         extrato.setSaldoInicial(null);
-        extrato.setAplicacoes("0,00");
+
+        // B3/FII:
+        // Os proventos recebidos entram como movimentação.
+        // O rendimento real deve ser calculado depois:
+        // (Saldo Atual - Saldo Anterior) + Movimentação
+        extrato.setAplicacoes(movimentacao);
         extrato.setResgates("0,00");
-        extrato.setRendimentos(extrairRendimentos(texto));
+        extrato.setRendimentos(null);
+
         extrato.setSaldoFinal(extrairSaldoFinal(texto));
 
         extrato.setRentabilidadeMes(null);
@@ -92,7 +101,7 @@ public class B3Parser implements DocumentoParser {
         return extrair(texto, "Valor\\s+Atualizado.*?R\\$\\s*([0-9\\.]+,[0-9]{2})");
     }
 
-    private String extrairRendimentos(String texto) {
+    private String extrairMovimentacao(String texto) {
         Pattern p = Pattern.compile(
                 "Proventos\\s+recebidos.*?Total\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})",
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
@@ -104,7 +113,7 @@ public class B3Parser implements DocumentoParser {
             return m.group(1).trim();
         }
 
-        return null;
+        return "0,00";
     }
 
     private String mesPorExtenso(String mes) {
