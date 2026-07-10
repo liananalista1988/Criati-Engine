@@ -82,6 +82,11 @@ public class EngineService {
             return "EXTRATO_FUNDO_BNB";
         }
 
+        if (t.contains("BANCO DO NORDESTE")
+                && (t.contains("SISTEMA FUNDOS DE INVESTIMENTO") || t.contains("SANTANDER SECURITIES SERVICES"))) {
+            return "EXTRATO_FUNDO_BNB";
+        }
+
         if (t.contains("EXTRATO MENSAL")
                 && t.contains("SALDO BRUTO ANTERIOR")
                 && t.contains("SALDO BRUTO FINAL")) {
@@ -111,6 +116,11 @@ public class EngineService {
 
         if (t.contains("EXTRATO CONSOLIDADO")
                 && (t.contains("BNB") || t.contains("BANCO DO NORDESTE"))) {
+            return "BNB";
+        }
+
+        if (t.contains("BANCO DO NORDESTE")
+                && (t.contains("SISTEMA FUNDOS DE INVESTIMENTO") || t.contains("SANTANDER SECURITIES SERVICES"))) {
             return "BNB";
         }
 
@@ -182,6 +192,21 @@ public class EngineService {
 
         if (dataB3Matcher.find()) {
             return dataB3Matcher.group(1) + "/" + dataB3Matcher.group(2);
+        }
+
+        // Layout BNB "Extrato Mensal": a data de emissao (DD/MM/AAAA) vem
+        // seguida, na mesma linha, do mes/ano de competencia (MM/AAAA).
+        // Precisa vir antes do fallback generico abaixo, senao o fallback
+        // acaba capturando o mes/ano de dentro da propria data de emissao.
+        Pattern competenciaAoLadoDataEmissao = Pattern.compile(
+                "\\d{2}/\\d{2}/20\\d{2}\\s+(0[1-9]|1[0-2])/(20\\d{2})",
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcherCompetenciaAoLado = competenciaAoLadoDataEmissao.matcher(texto);
+
+        if (matcherCompetenciaAoLado.find()) {
+            return matcherCompetenciaAoLado.group(1) + "/" + matcherCompetenciaAoLado.group(2);
         }
 
         Pattern qualquerCompetenciaPattern = Pattern.compile(

@@ -1,10 +1,11 @@
 package com.criati.criati.engine.service;
 
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.concurrent.TimeUnit;
 
 import javax.imageio.ImageIO;
 
@@ -16,192 +17,145 @@ import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.criati.criati.engine.exception.LeituraPdfException;
 import com.criati.criati.engine.model.PdfTextoResponse;
 
 @Service
 public class PdfService {
 
-    private static final int MINIMO_CARACTERES_VALIDOS = 100;
+    /**
+     * Quantidade minima de caracteres uteis que a extracao nativa do PDFBox
+     * precisa retornar para considerarmos que o PDF tem uma camada de texto
+     * de verdade. Abaixo disso, tratamos o PDF como "sem texto" (ex.: PDF
+     * gerado a partir de uma imagem ou com o texto convertido em desenhos
+     * vetoriais, como e o caso de arquivos gerados por alguns drivers de
+     * "imprimir em PDF") e caimos para OCR.
+     */
+    private static final int MINIMO_CARACTERES_TEXTO_NATIVO = 30;
+
+    private static final int DPI_RENDERIZACAO_OCR = 300;
 
     public PdfTextoResponse extrairTexto(MultipartFile arquivo) throws IOException {
 
+        if (arquivo == null || arquivo.isEmpty()) {
+            throw new LeituraPdfException(
+                    "Nenhum arquivo foi enviado (ou o arquivo esta vazio). Selecione um PDF valido.");
+        }
+
         byte[] bytes = arquivo.getBytes();
 
-        /*
-         * PRIMEIRA TENTATIVA:
-         * mantém exatamente o funcionamento atual com PDFBox.
-         */
-        String texto = extrairComPdfBox(bytes);
-
-        /*
-         * SEGUNDA TENTATIVA:
-         * só executa OCR quando o método atual não conseguir
-         * extrair um texto minimamente válido.
-         */
-        if (!textoValido(texto)) {
-            texto = extrairComOcr(bytes);
-        }
-
-        if (texto == null) {
-            texto = "";
-        }
-
-        return new PdfTextoResponse(
-                arquivo.getOriginalFilename(),
-                texto.length(),
-                texto
-        );
-    }
-
-    private String extrairComPdfBox(byte[] bytes) throws IOException {
-
         try (PDDocument documento = Loader.loadPDF(bytes)) {
 
-            PDFTextStripper stripper = new PDFTextStripper();
+            String textoNativo = extrairTextoNativo(documento);
+            String textoFinal = textoNativo;
 
-            return stripper.getText(documento);
-        }
-    }
+            boolean textoNativoInsuficiente =
+                    textoNativo == null || textoNativo.trim().length() < MINIMO_CARACTERES_TEXTO_NATIVO;
 
-    private boolean textoValido(String texto) {
+            if (textoNativoInsuficiente) {
+                String textoOcr = tentarOcr(documento);
 
-        if (texto == null || texto.isBlank()) {
-            return false;
-        }
-
-        String textoLimpo = texto
-                .replaceAll("\\s+", "")
-                .trim();
-
-        if (textoLimpo.length() < MINIMO_CARACTERES_VALIDOS) {
-            return false;
-        }
-
-        /*
-         * Confirma que o PDFBox realmente encontrou palavras,
-         * e não apenas caracteres soltos ou lixo do PDF.
-         */
-        long quantidadeLetras = textoLimpo
-                .chars()
-                .filter(Character::isLetter)
-                .count();
-
-        return quantidadeLetras >= 30;
-    }
-
-    private String extrairComOcr(byte[] bytes) throws IOException {
-
-        Path pastaTemporaria = Files.createTempDirectory("criati-ocr-");
-
-        StringBuilder textoCompleto = new StringBuilder();
-
-        try (PDDocument documento = Loader.loadPDF(bytes)) {
-
-            PDFRenderer renderer = new PDFRenderer(documento);
-
-            for (
-                    int pagina = 0;
-                    pagina < documento.getNumberOfPages();
-                    pagina++
-            ) {
-
-                BufferedImage imagem = renderer.renderImageWithDPI(
-                        pagina,
-                        300,
-                        ImageType.RGB
-                );
-
-                Path caminhoImagem = pastaTemporaria.resolve(
-                        "pagina-" + pagina + ".png"
-                );
-
-                ImageIO.write(
-                        imagem,
-                        "png",
-                        caminhoImagem.toFile()
-                );
-
-                String textoPagina = executarTesseract(caminhoImagem);
-
-                textoCompleto
-                        .append(textoPagina)
-                        .append(System.lineSeparator());
+                if (textoOcr != null && !textoOcr.isBlank()) {
+                    textoFinal = textoOcr;
+                }
             }
 
-        } finally {
-            excluirPastaTemporaria(pastaTemporaria);
-        }
+            if (textoFinal == null || textoFinal.isBlank()) {
+                throw new LeituraPdfException(
+                        "Nao foi possivel extrair texto do PDF \"" + arquivo.getOriginalFilename() + "\". "
+                        + "O arquivo nao possui uma camada de texto pesquisavel (provavelmente foi gerado a partir "
+                        + "de uma imagem/digitalizacao, com o conteudo desenhado como grafico vetorial) e a "
+                        + "tentativa de leitura via OCR nao retornou conteudo. Verifique se o arquivo nao esta "
+                        + "corrompido, se o OCR (Tesseract) esta instalado no servidor, ou tente reexportar o PDF "
+                        + "com texto pesquisavel.");
+            }
 
-        return textoCompleto.toString();
+            return new PdfTextoResponse(
+                    arquivo.getOriginalFilename(),
+                    textoFinal.length(),
+                    textoFinal
+            );
+
+        } catch (LeituraPdfException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new LeituraPdfException(
+                    "Falha ao abrir/ler o PDF \"" + arquivo.getOriginalFilename() + "\": " + e.getMessage(), e);
+        }
     }
 
-    private String executarTesseract(Path caminhoImagem) throws IOException {
-
-        ProcessBuilder processBuilder = new ProcessBuilder(
-                "tesseract",
-                caminhoImagem.toAbsolutePath().toString(),
-                "stdout",
-                "-l",
-                "por",
-                "--psm",
-                "6"
-        );
-
-        processBuilder.redirectErrorStream(true);
-
-        Process processo = processBuilder.start();
-
+    private String extrairTextoNativo(PDDocument documento) {
         try {
-
-            String retorno = new String(
-                    processo.getInputStream().readAllBytes(),
-                    StandardCharsets.UTF_8
-            );
-
-            int codigoSaida = processo.waitFor();
-
-            if (codigoSaida != 0) {
-                throw new IOException(
-                        "O OCR falhou. Código: "
-                                + codigoSaida
-                                + ". Retorno: "
-                                + retorno
-                );
-            }
-
-            return retorno;
-
-        } catch (InterruptedException e) {
-
-            Thread.currentThread().interrupt();
-
-            throw new IOException(
-                    "O processamento OCR foi interrompido.",
-                    e
-            );
+            PDFTextStripper stripper = new PDFTextStripper();
+            return stripper.getText(documento);
+        } catch (IOException e) {
+            return null;
         }
     }
 
-    private void excluirPastaTemporaria(Path pasta) {
+    /**
+     * Renderiza cada pagina do PDF como imagem e tenta reconhecer o texto
+     * usando o Tesseract (instalado no ambiente/Docker via
+     * "tesseract-ocr" + "tesseract-ocr-por"). Se o binario do Tesseract
+     * nao estiver disponivel, retorna null silenciosamente para que o
+     * chamador reporte o erro de forma clara ao usuario.
+     */
+    private String tentarOcr(PDDocument documento) {
+        try {
+            PDFRenderer renderer = new PDFRenderer(documento);
+            StringBuilder textoCompleto = new StringBuilder();
 
-        if (pasta == null || !Files.exists(pasta)) {
-            return;
+            int quantidadePaginas = documento.getNumberOfPages();
+
+            for (int pagina = 0; pagina < quantidadePaginas; pagina++) {
+                BufferedImage imagem = renderer.renderImageWithDPI(pagina, DPI_RENDERIZACAO_OCR, ImageType.GRAY);
+
+                File arquivoTemporario = File.createTempFile("criati-ocr-", ".png");
+
+                try {
+                    ImageIO.write(imagem, "png", arquivoTemporario);
+
+                    String textoPagina = executarTesseract(arquivoTemporario);
+
+                    if (textoPagina != null) {
+                        textoCompleto.append(textoPagina).append("\n");
+                    }
+                } finally {
+                    Files.deleteIfExists(arquivoTemporario.toPath());
+                }
+            }
+
+            return textoCompleto.toString();
+
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String executarTesseract(File imagem) throws IOException, InterruptedException {
+        ProcessBuilder pb = new ProcessBuilder(
+                "tesseract", imagem.getAbsolutePath(), "stdout", "-l", "por", "--psm", "6"
+        );
+        pb.redirectErrorStream(false);
+
+        Process processo = pb.start();
+
+        ByteArrayOutputStream saida = new ByteArrayOutputStream();
+        try (var entrada = processo.getInputStream()) {
+            entrada.transferTo(saida);
         }
 
-        try (var caminhos = Files.walk(pasta)) {
+        boolean finalizou = processo.waitFor(60, TimeUnit.SECONDS);
 
-            caminhos
-                    .sorted((a, b) -> b.compareTo(a))
-                    .forEach(caminho -> {
-                        try {
-                            Files.deleteIfExists(caminho);
-                        } catch (IOException ignored) {
-                            // Apenas limpeza de arquivos temporários.
-                        }
-                    });
-
-        } catch (IOException ignored) {
-            // Não impede o retorno do extrato.
+        if (!finalizou) {
+            processo.destroyForcibly();
+            return null;
         }
+
+        if (processo.exitValue() != 0) {
+            return null;
+        }
+
+        return saida.toString("UTF-8");
     }
 }
