@@ -134,7 +134,6 @@ public class B3Parser implements DocumentoParser {
 
         return null;
         
-        
     }
 
     private String extrair(String texto, String regex) {
