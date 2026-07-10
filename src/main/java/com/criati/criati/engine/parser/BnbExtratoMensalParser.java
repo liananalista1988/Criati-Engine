@@ -8,6 +8,15 @@ import org.springframework.stereotype.Component;
 import com.criati.criati.engine.model.DocumentoContexto;
 import com.criati.criati.engine.model.ExtratoInvestimento;
 
+/**
+ * Layout "Sistema Fundos de Investimento / Extrato Mensal" do Banco do
+ * Nordeste (BNB), administrado pela Santander Securities Services Brasil
+ * DTVM. Este layout e diferente do "EXTRATO CONSOLIDADO" ja tratado por
+ * {@link BnbParser}: os rotulos de saldo sao "SALDO ANTERIOR" / "SALDO
+ * FINAL" (em vez de "SALDO INICIAL" / "SALDO FINAL"), a competencia
+ * aparece como "Mes/Ano" ao lado da data de emissao, e o resumo de
+ * movimentacao usa os rotulos "Total Aplicacoes" / "Total Resgates".
+ */
 @Component
 public class BnbExtratoMensalParser implements DocumentoParser {
 
@@ -20,6 +29,8 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         boolean ehLayoutExtratoMensal = t.contains("SISTEMA FUNDOS DE INVESTIMENTO")
                 || (t.contains("EXTRATO MENSAL") && t.contains("SANTANDER SECURITIES SERVICES"));
 
+        // Nao conflitar com o layout "EXTRATO CONSOLIDADO" (BnbParser) nem
+        // com o layout da Caixa, que tambem usa "EXTRATO MENSAL".
         boolean naoEhOutroLayout = !t.contains("EXTRATO CONSOLIDADO")
                 && !t.contains("SALDO BRUTO ANTERIOR")
                 && !t.contains("SALDO BRUTO FINAL");
@@ -49,6 +60,9 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         extrato.setCnpjAdministrador(extrair(texto,
                 "ADMINISTRADOR FIDUCI[ÁA]RIO:.*?CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
 
+        // Linha "Rend. Mensal / Rend. Anual / Ult. 12 Meses" (podem nao
+        // vir preenchidos em todos os extratos - nesse caso calculamos a
+        // rentabilidade do mes a partir do valor da cota, mais abaixo).
         extrato.setRentabilidadeMes(extrair(texto,
                 "BNB\\s+SOBERANO\\s+FIF\\s+([\\-]?[0-9]+,[0-9]+)\\s+[\\-]?[0-9]+,[0-9]+\\s+[\\-]?[0-9]+,[0-9]+"));
         extrato.setRentabilidadeAno(extrair(texto,
@@ -56,11 +70,26 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         extrato.setRentabilidade12Meses(extrair(texto,
                 "BNB\\s+SOBERANO\\s+FIF\\s+[\\-]?[0-9]+,[0-9]+\\s+[\\-]?[0-9]+,[0-9]+\\s+([\\-]?[0-9]+,[0-9]+)"));
 
+        // "SALDO ANTERIOR  <cotas>  <valor da cota>  <valor em R$>"
         extrato.setSaldoInicial(extrair(texto,
                 "SALDO\\s+ANTERIOR\\s+[\\-]?[0-9\\.]+,[0-9]+\\s+[\\-]?[0-9]+,[0-9]+\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
+        // ".SALDO FINAL ..." - o "." antes de SALDO e um artefato comum de
+        // extracao (marcador de linha), por isso e opcional.
         extrato.setSaldoFinal(extrair(texto,
                 "\\.?\\s*SALDO\\s+FINAL\\s+[\\-]?[0-9\\.]+,[0-9]+\\s+[\\-]?[0-9]+,[0-9]+\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
+
+        // Quando o extrato nao traz o percentual de rentabilidade do mes
+        // pronto (comum nesse layout), calculamos a partir do valor da
+        // cota anterior e do valor da cota final:
+        //   rentabilidadeMes = (cotaFinal / cotaInicial - 1) * 100
+        if (extrato.getRentabilidadeMes() == null) {
+            String rentabilidadeCalculada = calcularRentabilidadeMesPorCota(texto);
+
+            if (rentabilidadeCalculada != null) {
+                extrato.setRentabilidadeMes(rentabilidadeCalculada);
+            }
+        }
 
         String cabecalhoResumo = "TOTAL\\s+APLICA[CÇ][OÕ]ES\\s+TOTAL\\s+RESGATES\\s+REND\\.?\\s*BRUTO\\s+MENSAL\\s+I\\.?R\\.?\\s+FEDERAL";
 
@@ -74,17 +103,68 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         return extrato;
     }
 
+    /**
+     * Calcula a rentabilidade do mes com base no valor da cota anterior e
+     * no valor da cota final, quando o extrato nao traz esse percentual
+     * pronto:
+     *   rentabilidadeMes = (valorCotaFinal / valorCotaInicial - 1) * 100
+     */
+    private String calcularRentabilidadeMesPorCota(String texto) {
+        String cotaAnteriorTexto = extrair(texto,
+                "SALDO\\s+ANTERIOR\\s+[\\-]?[0-9\\.]+,[0-9]+\\s+([\\-]?[0-9]+,[0-9]+)\\s+[\\-]?[0-9\\.]+,[0-9]{2}");
+
+        String cotaFinalTexto = extrair(texto,
+                "\\.?\\s*SALDO\\s+FINAL\\s+[\\-]?[0-9\\.]+,[0-9]+\\s+([\\-]?[0-9]+,[0-9]+)\\s+[\\-]?[0-9\\.]+,[0-9]{2}");
+
+        Double cotaAnterior = paraNumero(cotaAnteriorTexto);
+        Double cotaFinal = paraNumero(cotaFinalTexto);
+
+        if (cotaAnterior == null || cotaFinal == null || cotaAnterior == 0) {
+            return null;
+        }
+
+        double rentabilidade = (cotaFinal / cotaAnterior - 1) * 100;
+
+        return formatarNumeroBr(rentabilidade);
+    }
+
+    private Double paraNumero(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+
+        try {
+            String normalizado = valor.trim()
+                    .replace(".", "")
+                    .replace(",", ".");
+
+            return Double.parseDouble(normalizado);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String formatarNumeroBr(double valor) {
+        String formatado = String.format(java.util.Locale.US, "%.4f", valor);
+        return formatado.replace(".", ",");
+    }
+
     private String extrairConta(String texto) {
+        // Ex.: "059 - SAO LUIS CENTRO   000131774-9   1"
         String conta = extrair(texto, "\\d{2,3}\\s*-\\s*[A-ZÀ-Ú\\s]+?\\s+(\\d{5,9}-\\d)\\s+\\d+");
 
         if (conta != null) {
             return conta;
         }
 
+        // Fallback mais generico: qualquer numero de conta no formato
+        // "digitos-digito" presente no documento.
         return extrair(texto, "(\\d{6,9}-\\d)");
     }
 
     private String extrairCompetencia(String texto) {
+        // "Nome / Data Emissao / Mes/Ano" -> linha de dados no formato
+        // "... 06/07/2026 06/2026" (data de emissao seguida da competencia).
         Pattern padrao = Pattern.compile(
                 "\\d{2}/\\d{2}/20\\d{2}\\s+(0[1-9]|1[0-2])/(20\\d{2})",
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
