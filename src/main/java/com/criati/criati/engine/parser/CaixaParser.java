@@ -49,107 +49,283 @@ public class CaixaParser implements DocumentoParser {
         return extrato;
     }
 
-    private void processarExtratoMensal(String texto, ExtratoInvestimento extrato) {
-        extrato.setNomeFundo(limpar(extrair(texto,
-                "(CI CAIXA.*?RL)\\s+CNPJ")));
+    private void processarExtratoMensal(
+            String texto,
+            ExtratoInvestimento extrato
+    ) {
+        extrato.setNomeFundo(limpar(extrair(
+                texto,
+                "(CI CAIXA.*?RL)\\s+CNPJ"
+        )));
 
-        extrato.setCnpjFundo(extrair(texto,
-                "CI CAIXA.*?CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
+        extrato.setCnpjFundo(extrair(
+                texto,
+                "CI CAIXA.*?CNPJ:\\s*"
+                        + "(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"
+        ));
 
-        extrato.setCnpjAdministrador(extrair(texto,
-                "CPF/CNPJ:\\s*(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})\\s+CPF/CNPJ"));
+        extrato.setCnpjAdministrador(extrair(
+                texto,
+                "CPF/CNPJ:\\s*"
+                        + "(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"
+                        + "\\s+CPF/CNPJ"
+        ));
 
-        extrato.setDataInicio(extrair(texto,
-                "Data Início\\s+(\\d{2}/\\d{2}/\\d{4})"));
+        extrato.setDataInicio(extrair(
+                texto,
+                "Data Início\\s+(\\d{2}/\\d{2}/\\d{4})"
+        ));
 
-        extrato.setDataFim(extrair(texto,
-                "Data Fim\\s+(\\d{2}/\\d{2}/\\d{4})"));
+        extrato.setDataFim(extrair(
+                texto,
+                "Data Fim\\s+(\\d{2}/\\d{2}/\\d{4})"
+        ));
 
-        extrato.setRentabilidadeMes(extrair(texto,
-                "Rentabilidade Mês\\s+([0-9,]+%?)"));
+        extrato.setRentabilidadeMes(extrairPercentualPorRotulo(
+                texto,
+                "Rentabilidade M[eê]s"
+        ));
 
-        extrato.setRentabilidadeAno(extrair(texto,
-                "Rentabilidade Ano\\s+([0-9,]+%?)"));
+        extrato.setRentabilidadeAno(extrairPercentualPorRotulo(
+                texto,
+                "Rentabilidade Ano"
+        ));
 
-        extrato.setRentabilidade12Meses(extrair(texto,
-                "Rentabilidade Últimos 12 meses\\s+([0-9,]+%?)"));
+        extrato.setRentabilidade12Meses(extrairPercentualPorRotulo(
+                texto,
+                "Rentabilidade Últimos 12 meses"
+        ));
 
-        extrato.setSaldoInicial(extrair(texto,
-                "Saldo Bruto Anterior\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})"));
+        extrato.setSaldoInicial(extrair(
+                texto,
+                "Saldo Bruto Anterior\\s+R\\$\\s*"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setAplicacoes(extrair(texto,
-                "Aplicações\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})"));
+        extrato.setAplicacoes(extrair(
+                texto,
+                "Aplicações\\s+R\\$\\s*"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setResgates(extrair(texto,
-                "Resgates\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})"));
+        extrato.setResgates(extrair(
+                texto,
+                "Resgates\\s+R\\$\\s*"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setRendimentos(extrair(texto,
-                "Rendimento Bruto\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})"));
+        extrato.setRendimentos(extrair(
+                texto,
+                "Rendimento Bruto\\s+R\\$\\s*"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setSaldoFinal(extrair(texto,
-                "Saldo Bruto Final\\s+R\\$\\s*([0-9\\.]+,[0-9]{2})"));
+        extrato.setSaldoFinal(extrair(
+                texto,
+                "Saldo Bruto Final\\s+R\\$\\s*"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
     }
 
-    private void processarFundoInvestimento(String texto, ExtratoInvestimento extrato) {
+    private void processarFundoInvestimento(
+            String texto,
+            ExtratoInvestimento extrato
+    ) {
         extrato.setNomeFundo(extrairNomeFundoCaixa(texto));
 
-        extrato.setCnpjFundo(extrair(texto,
-                "CNPJ do Fundo\\s+(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
+        extrato.setCnpjFundo(extrair(
+                texto,
+                "CNPJ do Fundo\\s+"
+                        + "(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"
+        ));
 
-        extrato.setCnpjAdministrador(extrair(texto,
-                "CNPJ da Administradora\\s+(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
+        extrato.setCnpjAdministrador(extrair(
+                texto,
+                "CNPJ da Administradora\\s+"
+                        + "(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"
+        ));
 
-        extrato.setRentabilidadeMes(extrair(texto,
-                "No M[eê]s\\(%\\)\\s+No Ano\\(%\\)\\s+Nos Últimos 12 Meses\\(%\\).*?([0-9]+,[0-9]+)"));
+        String[] rentabilidades =
+                extrairRentabilidadesFundoCaixa(texto);
 
-        extrato.setRentabilidadeAno(extrair(texto,
-                "No M[eê]s\\(%\\)\\s+No Ano\\(%\\)\\s+Nos Últimos 12 Meses\\(%\\).*?[0-9]+,[0-9]+\\s+([0-9]+,[0-9]+)"));
+        extrato.setRentabilidadeMes(rentabilidades[0]);
+        extrato.setRentabilidadeAno(rentabilidades[1]);
+        extrato.setRentabilidade12Meses(rentabilidades[2]);
 
-        extrato.setRentabilidade12Meses(extrair(texto,
-                "No M[eê]s\\(%\\)\\s+No Ano\\(%\\)\\s+Nos Últimos 12 Meses\\(%\\).*?[0-9]+,[0-9]+\\s+[0-9]+,[0-9]+\\s+([0-9]+,[0-9]+)"));
+        extrato.setSaldoInicial(extrair(
+                texto,
+                "Saldo Anterior\\s+"
+                        + "([0-9\\.]+,[0-9]{2})\\s*C?"
+        ));
 
-        extrato.setSaldoInicial(extrair(texto,
-                "Saldo Anterior\\s+([0-9\\.]+,[0-9]{2})\\s*C?"));
+        extrato.setAplicacoes(extrair(
+                texto,
+                "Aplicações\\s+"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setAplicacoes(extrair(texto,
-                "Aplicações\\s+([0-9\\.]+,[0-9]{2})"));
+        extrato.setResgates(extrair(
+                texto,
+                "Resgates\\s+"
+                        + "([0-9\\.]+,[0-9]{2})"
+        ));
 
-        extrato.setResgates(extrair(texto,
-                "Resgates\\s+([0-9\\.]+,[0-9]{2})"));
+        extrato.setRendimentos(extrair(
+                texto,
+                "Rendimento Bruto no M[eê]s\\s+"
+                        + "([0-9\\.]+,[0-9]{2})\\s*[CD]?"
+        ));
 
-        extrato.setRendimentos(extrair(texto,
-                "Rendimento Bruto no M[eê]s\\s+([0-9\\.]+,[0-9]{2})\\s*C?"));
+        extrato.setSaldoFinal(extrair(
+                texto,
+                "Saldo Bruto\\*?\\s+"
+                        + "([0-9\\.]+,[0-9]{2})\\s*C?"
+        ));
+    }
 
-        extrato.setSaldoFinal(extrair(texto,
-                "Saldo Bruto\\*?\\s+([0-9\\.]+,[0-9]{2})\\s*C?"));
+    /**
+     * Extrai as três rentabilidades do layout:
+     *
+     * No Mês(%) | No Ano(%) | Nos Últimos 12 Meses(%)
+     *
+     * A Caixa pode apresentar o sinal negativo depois do número:
+     * 0,1218-
+     */
+    private String[] extrairRentabilidadesFundoCaixa(String texto) {
+        String percentual =
+                "([+\\-−]?[0-9]+(?:,[0-9]+)?%?[\\-−]?)";
+
+        String regex =
+                "No M[eê]s\\(%\\)\\s+"
+                        + "No Ano\\(%\\)\\s+"
+                        + "Nos Últimos 12 Meses\\(%\\)"
+                        + ".*?"
+                        + percentual + "\\s+"
+                        + percentual + "\\s+"
+                        + percentual;
+
+        Pattern pattern = Pattern.compile(
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(texto);
+
+        if (!matcher.find()) {
+            return new String[]{null, null, null};
+        }
+
+        return new String[]{
+                normalizarSinalPercentual(matcher.group(1)),
+                normalizarSinalPercentual(matcher.group(2)),
+                normalizarSinalPercentual(matcher.group(3))
+        };
+    }
+
+    /**
+     * Extrai percentuais do layout "Extrato Mensal".
+     * Também aceita o sinal negativo antes ou depois do número.
+     */
+    private String extrairPercentualPorRotulo(
+            String texto,
+            String rotulo
+    ) {
+        String regex =
+                rotulo
+                        + "\\s+"
+                        + "([+\\-−]?[0-9]+(?:,[0-9]+)?%?[\\-−]?)";
+
+        String percentual = extrair(texto, regex);
+
+        return normalizarSinalPercentual(percentual);
+    }
+
+    /**
+     * Converte:
+     *
+     * 0,1218-  -> -0,1218
+     * -0,1218  -> -0,1218
+     * 0,1218   -> 0,1218
+     */
+    private String normalizarSinalPercentual(String valor) {
+        if (valor == null || valor.isBlank()) {
+            return null;
+        }
+
+        String percentual = valor
+                .replace("\u2212", "-")
+                .replace("%", "")
+                .replaceAll("\\s+", "")
+                .trim();
+
+        boolean negativo =
+                percentual.startsWith("-")
+                        || percentual.endsWith("-");
+
+        percentual = percentual
+                .replace("-", "")
+                .replace("+", "");
+
+        if (percentual.isBlank()) {
+            return null;
+        }
+
+        return negativo
+                ? "-" + percentual
+                : percentual;
     }
 
     private String extrairNomeFundoCaixa(String texto) {
-        String nome = extrair(texto,
-                "Fundo\\s+(CAIXA\\s+.*?)(?:\\s+CNPJ do Fundo)");
+        String nome = extrair(
+                texto,
+                "Fundo\\s+"
+                        + "(CAIXA\\s+.*?)"
+                        + "(?:\\s+CNPJ do Fundo)"
+        );
 
-        if (nome != null) return limpar(nome);
+        if (nome != null) {
+            return limpar(nome);
+        }
 
-        nome = extrair(texto,
-                "Fundo\\s+\\n?\\s*(CAIXA\\s+FI\\s+BRASIL\\s+.*?)(?:\\s+CNPJ do Fundo)");
+        nome = extrair(
+                texto,
+                "Fundo\\s+\\n?\\s*"
+                        + "(CAIXA\\s+FI\\s+BRASIL\\s+.*?)"
+                        + "(?:\\s+CNPJ do Fundo)"
+        );
 
-        if (nome != null) return limpar(nome);
+        if (nome != null) {
+            return limpar(nome);
+        }
 
-        nome = extrair(texto,
-                "(CAIXA\\s+(?:FIC|FI)\\s+BRASIL\\s+.*?)(?:\\s+CNPJ do Fundo|\\s+\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})");
+        nome = extrair(
+                texto,
+                "(CAIXA\\s+(?:FIC|FI)\\s+BRASIL\\s+.*?)"
+                        + "(?:"
+                        + "\\s+CNPJ do Fundo"
+                        + "|\\s+\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}"
+                        + ")"
+        );
 
-        if (nome != null) return limpar(nome);
+        if (nome != null) {
+            return limpar(nome);
+        }
 
         nome = extrairNomeFundoPorCnpj(texto);
 
-        if (nome != null) return limpar(nome);
+        if (nome != null) {
+            return limpar(nome);
+        }
 
         return null;
     }
 
     private String extrairNomeFundoPorCnpj(String texto) {
-        String cnpj = extrair(texto,
-                "CNPJ do Fundo\\s+(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})");
+        String cnpj = extrair(
+                texto,
+                "CNPJ do Fundo\\s+"
+                        + "(\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"
+        );
 
         if ("10.740.670/0001-06".equals(cnpj)) {
             return "CAIXA FI BRASIL IRF-M1 TP RF";
@@ -157,7 +333,7 @@ public class CaixaParser implements DocumentoParser {
 
         return null;
     }
-    
+
     private boolean ehLayoutExtratoMensal(String texto) {
         String t = texto.toUpperCase();
 
@@ -166,45 +342,73 @@ public class CaixaParser implements DocumentoParser {
                 && t.contains("SALDO BRUTO FINAL");
     }
 
-    private String extrairConta(String texto, String nomeArquivo) {
-        String conta = extrair(texto,
-                "Conta Corrente\\s+\\d{4}\\.(\\d{6,}-\\d)");
-
-        if (conta != null) return removerZerosConta(conta);
-
-        conta = extrair(nomeArquivo, "(\\d{6,}-\\d)");
-
-        if (conta != null) return removerZerosConta(conta);
-
-        return null;
-    }
-
-    private String removerZerosConta(String conta) {
-        if (conta == null) return null;
-        return conta.replaceFirst("^0+", "");
-    }
-
-    private String extrairCompetencia(String texto) {
-        String competencia = extrair(texto,
-                "M[eê]s/Ano\\s+(\\d{2}/\\d{4})");
-
-        if (competencia != null) return competencia;
-
-        Pattern p = Pattern.compile(
-                "Data Fim\\s+\\d{2}/(\\d{2})/(\\d{4})",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+    private String extrairConta(
+            String texto,
+            String nomeArquivo
+    ) {
+        String conta = extrair(
+                texto,
+                "Conta Corrente\\s+\\d{4}\\.(\\d{6,}-\\d)"
         );
 
-        Matcher m = p.matcher(texto);
+        if (conta != null) {
+            return removerZerosConta(conta);
+        }
 
-        if (m.find()) {
-            return m.group(1) + "/" + m.group(2);
+        conta = extrair(
+                nomeArquivo,
+                "(\\d{6,}-\\d)"
+        );
+
+        if (conta != null) {
+            return removerZerosConta(conta);
         }
 
         return null;
     }
 
-    private String extrair(String texto, String regex) {
+    private String removerZerosConta(String conta) {
+        if (conta == null) {
+            return null;
+        }
+
+        return conta.replaceFirst("^0+", "");
+    }
+
+    private String extrairCompetencia(String texto) {
+        String competencia = extrair(
+                texto,
+                "M[eê]s/Ano\\s+(\\d{2}/\\d{4})"
+        );
+
+        if (competencia != null) {
+            return competencia;
+        }
+
+        Pattern pattern = Pattern.compile(
+                "Data Fim\\s+\\d{2}/(\\d{2})/(\\d{4})",
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(texto);
+
+        if (matcher.find()) {
+            return matcher.group(1)
+                    + "/"
+                    + matcher.group(2);
+        }
+
+        return null;
+    }
+
+    private String extrair(
+            String texto,
+            String regex
+    ) {
+        if (texto == null || regex == null) {
+            return null;
+        }
+
         Pattern pattern = Pattern.compile(
                 regex,
                 Pattern.CASE_INSENSITIVE | Pattern.DOTALL
@@ -213,8 +417,12 @@ public class CaixaParser implements DocumentoParser {
         Matcher matcher = pattern.matcher(texto);
 
         if (matcher.find()) {
-            for (int i = 1; i <= matcher.groupCount(); i++) {
-                String valor = matcher.group(i);
+            for (
+                    int grupo = 1;
+                    grupo <= matcher.groupCount();
+                    grupo++
+            ) {
+                String valor = matcher.group(grupo);
 
                 if (valor != null && !valor.isBlank()) {
                     return limpar(valor);
@@ -228,7 +436,9 @@ public class CaixaParser implements DocumentoParser {
     }
 
     private String normalizar(String valor) {
-        if (valor == null) return "";
+        if (valor == null) {
+            return "";
+        }
 
         return valor
                 .replace("\u00A0", " ")
@@ -236,7 +446,9 @@ public class CaixaParser implements DocumentoParser {
     }
 
     private String limpar(String valor) {
-        if (valor == null) return null;
+        if (valor == null) {
+            return null;
+        }
 
         return valor
                 .replace("\u00A0", " ")
