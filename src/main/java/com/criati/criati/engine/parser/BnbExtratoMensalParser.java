@@ -104,6 +104,30 @@ public class BnbExtratoMensalParser implements DocumentoParser {
     }
 
     /**
+     * rentabilidadeMes entra na exigencia porque, quando o extrato nao traz
+     * o percentual pronto, este parser o calcula a partir do valor da cota.
+     * Se nem o percentual nem as cotas forem lidos, o layout mudou.
+     */
+    @Override
+    public void validar(ExtratoInvestimento extrato, DocumentoContexto contexto) {
+        ValidadorExtrato.exigir(
+                extrato,
+                "BNB / Sistema Fundos de Investimento - Extrato Mensal",
+                contexto.getNomeArquivo(),
+                "competencia",
+                "conta",
+                "nomeFundo",
+                "cnpjFundo",
+                "saldoInicial",
+                "aplicacoes",
+                "resgates",
+                "rendimentos",
+                "saldoFinal",
+                "rentabilidadeMes"
+        );
+    }
+
+    /**
      * Calcula a rentabilidade do mes com base no valor da cota anterior e
      * no valor da cota final, quando o extrato nao traz esse percentual
      * pronto:
@@ -149,6 +173,16 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         return formatado.replace(".", ",");
     }
 
+    /**
+     * Ate a versao anterior havia aqui um fallback que aceitava qualquer
+     * "\d{6,9}-\d" em qualquer lugar do documento. Ele nao devolvia null
+     * quando falhava: devolvia a conta ERRADA, casando com o primeiro numero
+     * parecido (pedaco de CNPJ, numero de documento, protocolo). Conta errada
+     * e pior que conta faltando, porque a conta compoe a chave da posicao e
+     * o consumidor grava uma linha nova em vez de recusar o arquivo.
+     *
+     * O fallback continua existindo, mas ancorado no rotulo "CONTA".
+     */
     private String extrairConta(String texto) {
         // Ex.: "059 - SAO LUIS CENTRO   000131774-9   1"
         String conta = extrair(texto, "\\d{2,3}\\s*-\\s*[A-ZÀ-Ú\\s]+?\\s+(\\d{5,9}-\\d)\\s+\\d+");
@@ -157,9 +191,7 @@ public class BnbExtratoMensalParser implements DocumentoParser {
             return conta;
         }
 
-        // Fallback mais generico: qualquer numero de conta no formato
-        // "digitos-digito" presente no documento.
-        return extrair(texto, "(\\d{6,9}-\\d)");
+        return extrair(texto, "CONTA\\s*:?\\s*(\\d{5,9}-\\d)");
     }
 
     private String extrairCompetencia(String texto) {

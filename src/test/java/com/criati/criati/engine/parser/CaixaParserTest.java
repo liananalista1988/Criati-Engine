@@ -2,6 +2,7 @@ package com.criati.criati.engine.parser;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -46,6 +47,20 @@ class CaixaParserTest {
 
     private ExtratoInvestimento processar(String conteudo) {
         return parser.processar(new DocumentoContexto(NOME_ARQUIVO, conteudo));
+    }
+
+    /**
+     * Reproduz o que /engine/extrato-investimento faz: processa e so entao
+     * valida. A validacao saiu de dentro de processar() para que
+     * /engine/processar continue devolvendo o que conseguiu ler.
+     */
+    private ExtratoInvestimento processarEValidar(String conteudo) {
+        DocumentoContexto contexto = new DocumentoContexto(NOME_ARQUIVO, conteudo);
+        ExtratoInvestimento extrato = parser.processar(contexto);
+
+        parser.validar(extrato, contexto);
+
+        return extrato;
     }
 
     @Test
@@ -103,7 +118,7 @@ class CaixaParserTest {
 
         ExtratoIncompletoException erro = assertThrows(
                 ExtratoIncompletoException.class,
-                () -> processar(semConta));
+                () -> processarEValidar(semConta));
 
         assertTrue(erro.getCamposFaltando().contains("conta"));
         assertTrue(erro.getMessage().contains(NOME_ARQUIVO));
@@ -116,8 +131,19 @@ class CaixaParserTest {
 
         ExtratoIncompletoException erro = assertThrows(
                 ExtratoIncompletoException.class,
-                () -> processar(semRentabilidade));
+                () -> processarEValidar(semRentabilidade));
 
         assertTrue(erro.getCamposFaltando().contains("rentabilidadeMes"));
+    }
+
+    @Test
+    @DisplayName("processar sozinho nao lanca: /engine/processar e diagnostico")
+    void processarNaoValida() {
+        // Sem esta separacao, um extrato incompleto derrubaria tambem o
+        // endpoint que existe justamente para investigar por que ele esta
+        // incompleto.
+        String semConta = texto.replace("Conta Corrente", "XXXX");
+
+        assertNull(processar(semConta).getConta());
     }
 }

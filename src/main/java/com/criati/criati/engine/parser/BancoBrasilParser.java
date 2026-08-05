@@ -33,6 +33,40 @@ public class BancoBrasilParser implements DocumentoParser {
         return lista.get(0);
     }
 
+    /**
+     * O documento do BB traz varios fundos, mas "Conta" e "Mes/ano
+     * referencia" aparecem uma unica vez, no cabecalho, e sao copiadas para
+     * todos os itens. Entao uma falha na leitura da conta nao estraga um
+     * item: estraga o array inteiro. Por isso a validacao roda item a item
+     * e qualquer falha reprova a requisicao toda.
+     *
+     * rentabilidadeAno e rentabilidade12Meses ficam de fora da exigencia:
+     * fundo aplicado ha poucos meses legitimamente nao tem esses numeros no
+     * extrato, e reprovar por isso transformaria importacao boa em erro.
+     */
+    @Override
+    public void validar(ExtratoInvestimento extrato, DocumentoContexto contexto) {
+        String fundo = extrato.getNomeFundo() == null
+                ? "fundo sem nome identificado"
+                : extrato.getNomeFundo();
+
+        ValidadorExtrato.exigir(
+                extrato,
+                "BB / Consultas - Investimentos Fundos - Mensal (" + fundo + ")",
+                contexto.getNomeArquivo(),
+                "competencia",
+                "conta",
+                "nomeFundo",
+                "cnpjFundo",
+                "saldoInicial",
+                "aplicacoes",
+                "resgates",
+                "rendimentos",
+                "saldoFinal",
+                "rentabilidadeMes"
+        );
+    }
+
     public List<ExtratoInvestimento> processarTodos(DocumentoContexto contexto) {
         String texto = normalizar(contexto.getTexto());
 

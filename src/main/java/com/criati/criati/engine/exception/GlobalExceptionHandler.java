@@ -1,6 +1,7 @@
 package com.criati.criati.engine.exception;
 
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,23 @@ public class GlobalExceptionHandler {
         corpo.put("codigo", "EXTRATO_INCOMPLETO");
         corpo.put("mensagem", ex.getMessage());
         corpo.put("camposFaltando", ex.getCamposFaltando());
+
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(corpo);
+    }
+
+    /**
+     * Mantem "camposFaltando" no corpo, vazio, porque o consumidor le esse
+     * campo sempre. Antes desta separacao o documento nao reconhecido vinha
+     * como EXTRATO_INCOMPLETO com a lista vazia, e era so por isso que dava
+     * para diferenciar os dois casos.
+     */
+    @ExceptionHandler(DocumentoNaoReconhecidoException.class)
+    public ResponseEntity<Map<String, Object>> tratarDocumentoNaoReconhecido(DocumentoNaoReconhecidoException ex) {
+        Map<String, Object> corpo = new LinkedHashMap<>();
+        corpo.put("sucesso", false);
+        corpo.put("codigo", "DOCUMENTO_NAO_RECONHECIDO");
+        corpo.put("mensagem", ex.getMessage());
+        corpo.put("camposFaltando", List.of());
 
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(corpo);
     }

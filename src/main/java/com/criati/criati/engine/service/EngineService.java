@@ -8,8 +8,11 @@ import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.criati.criati.engine.exception.DocumentoNaoReconhecidoException;
+import com.criati.criati.engine.exception.ExtratoIncompletoException;
 import com.criati.criati.engine.model.DocumentoContexto;
 import com.criati.criati.engine.model.DocumentoProcessadoResponse;
+import com.criati.criati.engine.model.ExtratoInvestimento;
 import com.criati.criati.engine.parser.BancoBrasilParser;
 import com.criati.criati.engine.parser.DocumentoParser;
 
@@ -24,7 +27,20 @@ public class EngineService {
         this.parsers = parsers;
     }
 
+    /**
+     * Uso de diagnostico: devolve o que conseguiu ler, mesmo incompleto.
+     */
     public DocumentoProcessadoResponse processar(MultipartFile arquivo) throws IOException {
+        return processar(arquivo, false);
+    }
+
+    /**
+     * @param validar quando true, um documento nao reconhecido ou uma posicao
+     *                com campo obrigatorio faltando vira excecao em vez de
+     *                resposta com null. Usado por /engine/extrato-investimento,
+     *                onde o consumidor gravaria a posicao incompleta.
+     */
+    public DocumentoProcessadoResponse processar(MultipartFile arquivo, boolean validar) throws IOException {
         var pdfTexto = pdfService.extrairTexto(arquivo);
 
         String texto = pdfTexto.getTexto();
@@ -38,10 +54,12 @@ public class EngineService {
         String instituicao = detectarInstituicao(texto);
         String competencia = extrairCompetencia(texto);
 
+        DocumentoParser parserEscolhido = null;
         Object dados = null;
 
         for (DocumentoParser parser : parsers) {
             if (parser.suporta(contexto)) {
+                parserEscolhido = parser;
 
                 if (parser instanceof BancoBrasilParser bancoBrasilParser) {
                     dados = bancoBrasilParser.processarTodos(contexto);
@@ -53,6 +71,10 @@ public class EngineService {
             }
         }
 
+        if (validar) {
+            validarDados(dados, parserEscolhido, contexto, tipoDocumento, instituicao);
+        }
+
         return new DocumentoProcessadoResponse(
                 pdfTexto.getNomeArquivo(),
                 tipoDocumento,
@@ -62,6 +84,47 @@ public class EngineService {
                 texto,
                 dados
         );
+    }
+
+    /**
+     * Um PDF com varios fundos e reprovado por inteiro se qualquer item
+     * estiver incompleto — nao existe resposta parcial. No layout do BB a
+     * conta e a competencia vem do cabecalho e sao copiadas para todos os
+     * itens, entao "um item ruim" quase sempre significa que o cabecalho
+     * falhou e o array inteiro esta comprometido.
+     */
+    private void validarDados(
+            Object dados,
+            DocumentoParser parser,
+            DocumentoContexto contexto,
+            String tipoDocumento,
+            String instituicao
+    ) {
+        if (dados == null) {
+            throw new DocumentoNaoReconhecidoException(
+                    "Nenhum parser reconheceu o documento \"" + contexto.getNomeArquivo() + "\""
+                            + " (tipo detectado: " + tipoDocumento
+                            + ", instituicao detectada: " + instituicao + ")."
+                            + " Nenhuma posicao foi retornada.");
+        }
+
+        if (dados instanceof List<?> lista) {
+            if (lista.isEmpty()) {
+                throw new ExtratoIncompletoException(
+                        "O documento \"" + contexto.getNomeArquivo() + "\" foi reconhecido"
+                                + " (tipo " + tipoDocumento + "), mas nenhum fundo foi"
+                                + " encontrado dentro dele. Nenhuma posicao foi retornada.",
+                        List.of());
+            }
+
+            for (Object item : lista) {
+                parser.validar((ExtratoInvestimento) item, contexto);
+            }
+
+            return;
+        }
+
+        parser.validar((ExtratoInvestimento) dados, contexto);
     }
 
     private String detectarTipoDocumento(String texto) {

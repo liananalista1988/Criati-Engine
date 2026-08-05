@@ -54,6 +54,34 @@ public class BnbParser implements DocumentoParser {
         return extrato;
     }
 
+    /**
+     * A conta deste layout sai com ponto ("000.131-7"), diferente do layout
+     * "Extrato Mensal" do mesmo banco, que sai sem ("000131774-9"). Os dois
+     * formatos ficam como estao de proposito: a conta compoe a chave da
+     * posicao no consumidor, e unificar o formato agora tornaria inalcancavel
+     * toda linha ja gravada com o outro. Se as duas fontes descreverem as
+     * mesmas contas, isso precisa ser resolvido junto com uma migracao da
+     * planilha — nao aqui sozinho.
+     */
+    @Override
+    public void validar(ExtratoInvestimento extrato, DocumentoContexto contexto) {
+        ValidadorExtrato.exigir(
+                extrato,
+                "BNB / Extrato Consolidado",
+                contexto.getNomeArquivo(),
+                "competencia",
+                "conta",
+                "nomeFundo",
+                "cnpjFundo",
+                "saldoInicial",
+                "aplicacoes",
+                "resgates",
+                "rendimentos",
+                "saldoFinal",
+                "rentabilidadeMes"
+        );
+    }
+
     private String extrairCompetencia(String texto) {
 
         Pattern referencia = Pattern.compile(

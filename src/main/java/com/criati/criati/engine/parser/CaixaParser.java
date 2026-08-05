@@ -42,7 +42,19 @@ public class CaixaParser implements DocumentoParser {
 
         if (ehLayoutExtratoMensal(texto)) {
             processarExtratoMensal(texto, extrato);
+        } else {
+            processarFundoInvestimento(texto, extrato);
+        }
 
+        return extrato;
+    }
+
+    @Override
+    public void validar(ExtratoInvestimento extrato, DocumentoContexto contexto) {
+        String texto = normalizar(contexto.getTexto());
+        String nomeArquivo = contexto.getNomeArquivo();
+
+        if (ehLayoutExtratoMensal(texto)) {
             ValidadorExtrato.exigir(
                     extrato,
                     "CAIXA / Extrato Mensal",
@@ -54,29 +66,27 @@ public class CaixaParser implements DocumentoParser {
                     "saldoFinal",
                     "rentabilidadeMes"
             );
-        } else {
-            processarFundoInvestimento(texto, extrato);
 
-            ValidadorExtrato.exigir(
-                    extrato,
-                    "CAIXA / Extrato Fundo de Investimento",
-                    nomeArquivo,
-                    "competencia",
-                    "conta",
-                    "nomeFundo",
-                    "cnpjFundo",
-                    "saldoInicial",
-                    "aplicacoes",
-                    "resgates",
-                    "rendimentos",
-                    "saldoFinal",
-                    "rentabilidadeMes",
-                    "rentabilidadeAno",
-                    "rentabilidade12Meses"
-            );
+            return;
         }
 
-        return extrato;
+        ValidadorExtrato.exigir(
+                extrato,
+                "CAIXA / Extrato Fundo de Investimento",
+                nomeArquivo,
+                "competencia",
+                "conta",
+                "nomeFundo",
+                "cnpjFundo",
+                "saldoInicial",
+                "aplicacoes",
+                "resgates",
+                "rendimentos",
+                "saldoFinal",
+                "rentabilidadeMes",
+                "rentabilidadeAno",
+                "rentabilidade12Meses"
+        );
     }
 
     private void processarExtratoMensal(
