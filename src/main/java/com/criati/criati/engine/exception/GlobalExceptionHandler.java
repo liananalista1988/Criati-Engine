@@ -18,6 +18,17 @@ public class GlobalExceptionHandler {
         return responder(HttpStatus.UNPROCESSABLE_ENTITY, "LEITURA_PDF_FALHOU", ex.getMessage());
     }
 
+    @ExceptionHandler(ExtratoIncompletoException.class)
+    public ResponseEntity<Map<String, Object>> tratarExtratoIncompleto(ExtratoIncompletoException ex) {
+        Map<String, Object> corpo = new LinkedHashMap<>();
+        corpo.put("sucesso", false);
+        corpo.put("codigo", "EXTRATO_INCOMPLETO");
+        corpo.put("mensagem", ex.getMessage());
+        corpo.put("camposFaltando", ex.getCamposFaltando());
+
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(corpo);
+    }
+
     @ExceptionHandler({MultipartException.class, MaxUploadSizeExceededException.class})
     public ResponseEntity<Map<String, Object>> tratarMultipart(Exception ex) {
         return responder(HttpStatus.BAD_REQUEST, "ARQUIVO_INVALIDO",

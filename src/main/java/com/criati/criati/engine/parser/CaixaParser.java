@@ -42,8 +42,38 @@ public class CaixaParser implements DocumentoParser {
 
         if (ehLayoutExtratoMensal(texto)) {
             processarExtratoMensal(texto, extrato);
+
+            ValidadorExtrato.exigir(
+                    extrato,
+                    "CAIXA / Extrato Mensal",
+                    nomeArquivo,
+                    "competencia",
+                    "conta",
+                    "nomeFundo",
+                    "cnpjFundo",
+                    "saldoFinal",
+                    "rentabilidadeMes"
+            );
         } else {
             processarFundoInvestimento(texto, extrato);
+
+            ValidadorExtrato.exigir(
+                    extrato,
+                    "CAIXA / Extrato Fundo de Investimento",
+                    nomeArquivo,
+                    "competencia",
+                    "conta",
+                    "nomeFundo",
+                    "cnpjFundo",
+                    "saldoInicial",
+                    "aplicacoes",
+                    "resgates",
+                    "rendimentos",
+                    "saldoFinal",
+                    "rentabilidadeMes",
+                    "rentabilidadeAno",
+                    "rentabilidade12Meses"
+            );
         }
 
         return extrato;
@@ -190,15 +220,26 @@ public class CaixaParser implements DocumentoParser {
      *
      * A Caixa pode apresentar o sinal negativo depois do número:
      * 0,1218-
+     *
+     * Dois cuidados obrigatórios neste layout:
+     *
+     * 1) O cabeçalho quebra de linha no meio ("Nos Últimos 12\nMeses(%)"),
+     *    então todo separador do rótulo precisa ser \s+ e não espaço literal.
+     *
+     * 2) Entre o cabeçalho e os números existe o bloco "Cota em: DD/MM/AAAA".
+     *    Se o percentual aceitar número inteiro, o ano da última data casa
+     *    primeiro e a rentabilidade do mês sai como "2026" — errado e pior
+     *    que null, porque passa despercebido. Por isso o percentual aqui
+     *    exige a parte decimal, que a Caixa sempre imprime (ex.: 1,3228).
      */
     private String[] extrairRentabilidadesFundoCaixa(String texto) {
         String percentual =
-                "([+\\-−]?[0-9]+(?:,[0-9]+)?%?[\\-−]?)";
+                "([+\\-−]?[0-9]+,[0-9]+%?[\\-−]?)";
 
         String regex =
-                "No M[eê]s\\(%\\)\\s+"
-                        + "No Ano\\(%\\)\\s+"
-                        + "Nos Últimos 12 Meses\\(%\\)"
+                "No\\s+M[eê]s\\s*\\(%\\)\\s+"
+                        + "No\\s+Ano\\s*\\(%\\)\\s+"
+                        + "Nos\\s+[ÚU]ltimos\\s+12\\s+Meses\\s*\\(%\\)"
                         + ".*?"
                         + percentual + "\\s+"
                         + percentual + "\\s+"
@@ -342,22 +383,38 @@ public class CaixaParser implements DocumentoParser {
                 && t.contains("SALDO BRUTO FINAL");
     }
 
+    /**
+     * Lê a conta do bloco:
+     *
+     * Conta Corrente
+     * 3703.000575271423-
+     * 7
+     *
+     * O PDF quebra a linha entre o hífen e o dígito verificador, então o
+     * padrão precisa aceitar espaço/quebra em volta do hífen. Sem isso a
+     * conta voltava null — e a conta compõe a chave da posição
+     * (competência + conta + CNPJ), o que gerava linha duplicada a cada
+     * reenvio do mesmo extrato.
+     *
+     * O prefixo de 4 dígitos (agência/operação) continua fora do resultado,
+     * como antes, para não mudar a identidade das posições já gravadas.
+     */
     private String extrairConta(
             String texto,
             String nomeArquivo
     ) {
-        String conta = extrair(
+        String conta = extrairContaComDigito(
                 texto,
-                "Conta Corrente\\s+\\d{4}\\.(\\d{6,}-\\d)"
+                "Conta Corrente\\s+\\d{4}\\s*\\.\\s*(\\d{6,})\\s*-\\s*(\\d)"
         );
 
         if (conta != null) {
             return removerZerosConta(conta);
         }
 
-        conta = extrair(
+        conta = extrairContaComDigito(
                 nomeArquivo,
-                "(\\d{6,}-\\d)"
+                "(\\d{6,})\\s*-\\s*(\\d)"
         );
 
         if (conta != null) {
@@ -365,6 +422,28 @@ public class CaixaParser implements DocumentoParser {
         }
 
         return null;
+    }
+
+    private String extrairContaComDigito(
+            String texto,
+            String regex
+    ) {
+        if (texto == null) {
+            return null;
+        }
+
+        Pattern pattern = Pattern.compile(
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(texto);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        return matcher.group(1) + "-" + matcher.group(2);
     }
 
     private String removerZerosConta(String conta) {
