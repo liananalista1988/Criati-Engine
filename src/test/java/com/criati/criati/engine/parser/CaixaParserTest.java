@@ -111,6 +111,65 @@ class CaixaParserTest {
         assertEquals("1.010.000,00", extrato.getSaldoFinal());
     }
 
+    /**
+     * Troca so o valor do "Rendimento Bruto no Mes", preservando o rotulo e o
+     * espacamento original — que inclui espaco nao separavel (U+00A0), como o
+     * PDFBox devolve.
+     *
+     * Um replace simples de "10.000,00C" nao serve: essa sequencia tambem e
+     * sufixo de "1.010.000,00C", o saldo bruto da linha de baixo, e o teste
+     * acabaria mexendo nos dois.
+     */
+    private static String trocarRendimento(String valor) {
+        return texto.replaceAll(
+                "(?<rotulo>Rendimento Bruto no M[eê]s[\\s ]+)"
+                        + "[0-9\\.]+,[0-9]{2}C",
+                "${rotulo}" + valor);
+    }
+
+    /**
+     * Valores do extrato real de 06/2026 do IDKA IPCA 2A, o unico mes negativo
+     * que apareceu: rendimento "5.228,39D" e saldo caindo de 4.291.710,11 para
+     * 4.286.481,72. A subtracao fecha, entao o D e negativo mesmo.
+     */
+    @Test
+    @DisplayName("le o D de debito como valor negativo")
+    void leDebitoComoNegativo() {
+        ExtratoInvestimento extrato = processar(trocarRendimento("5.228,39D"));
+
+        assertEquals("-5.228,39", extrato.getRendimentos());
+
+        // O C de credito continua positivo, e sem marcador nenhum tambem.
+        assertEquals("1.000.000,00", extrato.getSaldoInicial());
+        assertEquals("1.010.000,00", extrato.getSaldoFinal());
+        assertEquals("0,00", extrato.getAplicacoes());
+    }
+
+    @Test
+    @DisplayName("le o hifen posposto ao valor como negativo")
+    void leHifenPospostoComoNegativo() {
+        assertEquals("-5.228,39",
+                processar(trocarRendimento("5.228,39-")).getRendimentos());
+    }
+
+    @Test
+    @DisplayName("nao le o C de \"Cota em:\" da linha seguinte como sinal do valor")
+    void naoConfundeLinhaSeguinteComSinal() {
+        // Regressao: com \s* antes do marcador, o padrao atravessaria a quebra
+        // de linha e qualquer palavra iniciada por C ou D viraria sinal.
+        assertEquals("10.000,00",
+                processar(trocarRendimento("10.000,00\nCota em: 30/06/2026"))
+                        .getRendimentos());
+    }
+
+    @Test
+    @DisplayName("le o sinal posposto da rentabilidade")
+    void leRentabilidadeNegativa() {
+        // "0,1218-" no extrato de 06/2026.
+        assertEquals("-0,1218",
+                processar(texto.replace("1,3228", "0,1218-")).getRentabilidadeMes());
+    }
+
     @Test
     @DisplayName("falha alto quando a conta nao pode ser extraida")
     void falhaQuandoContaNaoExtraida() {

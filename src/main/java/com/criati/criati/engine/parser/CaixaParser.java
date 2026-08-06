@@ -136,34 +136,29 @@ public class CaixaParser implements DocumentoParser {
                 "Rentabilidade Últimos 12 meses"
         ));
 
-        extrato.setSaldoInicial(extrair(
+        extrato.setSaldoInicial(extrairValorComSinal(
                 texto,
                 "Saldo Bruto Anterior\\s+R\\$\\s*"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setAplicacoes(extrair(
+        extrato.setAplicacoes(extrairValorComSinal(
                 texto,
                 "Aplicações\\s+R\\$\\s*"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setResgates(extrair(
+        extrato.setResgates(extrairValorComSinal(
                 texto,
                 "Resgates\\s+R\\$\\s*"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setRendimentos(extrair(
+        extrato.setRendimentos(extrairValorComSinal(
                 texto,
                 "Rendimento Bruto\\s+R\\$\\s*"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setSaldoFinal(extrair(
+        extrato.setSaldoFinal(extrairValorComSinal(
                 texto,
                 "Saldo Bruto Final\\s+R\\$\\s*"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
     }
 
@@ -192,35 +187,94 @@ public class CaixaParser implements DocumentoParser {
         extrato.setRentabilidadeAno(rentabilidades[1]);
         extrato.setRentabilidade12Meses(rentabilidades[2]);
 
-        extrato.setSaldoInicial(extrair(
+        extrato.setSaldoInicial(extrairValorComSinal(
                 texto,
                 "Saldo Anterior\\s+"
-                        + "([0-9\\.]+,[0-9]{2})\\s*C?"
         ));
 
-        extrato.setAplicacoes(extrair(
+        extrato.setAplicacoes(extrairValorComSinal(
                 texto,
                 "Aplicações\\s+"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setResgates(extrair(
+        extrato.setResgates(extrairValorComSinal(
                 texto,
                 "Resgates\\s+"
-                        + "([0-9\\.]+,[0-9]{2})"
         ));
 
-        extrato.setRendimentos(extrair(
+        extrato.setRendimentos(extrairValorComSinal(
                 texto,
                 "Rendimento Bruto no M[eê]s\\s+"
-                        + "([0-9\\.]+,[0-9]{2})\\s*[CD]?"
         ));
 
-        extrato.setSaldoFinal(extrair(
+        extrato.setSaldoFinal(extrairValorComSinal(
                 texto,
                 "Saldo Bruto\\*?\\s+"
-                        + "([0-9\\.]+,[0-9]{2})\\s*C?"
         ));
+    }
+
+    /**
+     * Lê um valor em R$ junto com o sinal, que a Caixa imprime DEPOIS do
+     * número — nunca antes.
+     *
+     * No layout "Extrato Fundo de Investimento" o sinal é a letra do lançamento
+     * contábil: C de crédito (positivo) e D de débito (negativo). Num mês de
+     * prejuízo o rendimento vem assim:
+     *
+     * Saldo Anterior              4.291.710,11C
+     * Rendimento Bruto no Mês         5.228,39D
+     * Saldo Bruto*                4.286.481,72C
+     *
+     * O padrão antigo casava o "[CD]?" fora do grupo capturado e devolvia
+     * 5.228,39 positivo, enquanto o saldo caía — a planilha recebia uma posição
+     * em que saldoInicial + aplicações - resgates + rendimentos não fecha com
+     * saldoFinal, e nada acusava o erro.
+     *
+     * O hífen posposto ("5.228,39-") também é aceito porque é como a Caixa
+     * marca o negativo nos percentuais deste mesmo documento (ver
+     * normalizarSinalPercentual). O layout "Extrato Mensal" não usa C/D — os
+     * valores vêm como "R$ 1.063.319,04" — mas passa por aqui do mesmo jeito
+     * para ganhar o tratamento de sinal; não havia extrato negativo desse
+     * layout em mãos para confirmar a notação.
+     *
+     * O separador antes do sinal é [ \t] e não \s de propósito: com \s o padrão
+     * atravessaria a quebra de linha e o C de "Cota em:" viraria o sinal do
+     * valor da linha de cima.
+     */
+    private String extrairValorComSinal(
+            String texto,
+            String rotulo
+    ) {
+        Pattern pattern = Pattern.compile(
+                rotulo
+                        + "([-\u2212]?[0-9\\.]+,[0-9]{2})"
+                        + "[ \\t]*([CD]|[-\u2212])?",
+                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+        );
+
+        Matcher matcher = pattern.matcher(texto);
+
+        if (!matcher.find()) {
+            return null;
+        }
+
+        String valor = limpar(matcher.group(1));
+        String marcador = matcher.group(2);
+
+        boolean negativo =
+                valor.startsWith("-")
+                        || valor.startsWith("\u2212")
+                        || "D".equalsIgnoreCase(marcador)
+                        || "-".equals(marcador)
+                        || "\u2212".equals(marcador);
+
+        valor = valor
+                .replace("-", "")
+                .replace("\u2212", "");
+
+        return negativo
+                ? "-" + valor
+                : valor;
     }
 
     /**
