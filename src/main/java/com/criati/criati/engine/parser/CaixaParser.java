@@ -11,6 +11,23 @@ import com.criati.criati.engine.model.ExtratoInvestimento;
 @Component
 public class CaixaParser implements DocumentoParser {
 
+    /**
+     * Rotulo que abre a secao consolidada no layout "Extrato Fundo de
+     * Investimento". Nao e um delimitador novo: e o mesmo rotulo que
+     * suporta() ja exige para reconhecer esse layout.
+     */
+    private static final Pattern INICIO_RESUMO_MOVIMENTACAO = Pattern.compile(
+            "Resumo\\s+da\\s+Movimentação",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    /**
+     * Secao que vem logo depois do resumo e repete os mesmos rotulos,
+     * lancamento a lancamento. Fecha a secao consolidada.
+     */
+    private static final Pattern FIM_RESUMO_MOVIMENTACAO = Pattern.compile(
+            "Movimentação\\s+Detalhada",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     @Override
     public boolean suporta(DocumentoContexto contexto) {
         String t = contexto.getTexto().toUpperCase();
@@ -187,30 +204,71 @@ public class CaixaParser implements DocumentoParser {
         extrato.setRentabilidadeAno(rentabilidades[1]);
         extrato.setRentabilidade12Meses(rentabilidades[2]);
 
+        // Os cinco consolidados saem da secao "Resumo da Movimentacao", e
+        // nao do documento inteiro: os mesmos rotulos se repetem na
+        // "Movimentacao Detalhada". Ver resumoDaMovimentacao().
+        String resumo = resumoDaMovimentacao(texto);
+
         extrato.setSaldoInicial(extrairValorComSinal(
-                texto,
+                resumo,
                 "Saldo Anterior\\s+"
         ));
 
         extrato.setAplicacoes(extrairValorComSinal(
-                texto,
+                resumo,
                 "Aplicações\\s+"
         ));
 
         extrato.setResgates(extrairValorComSinal(
-                texto,
+                resumo,
                 "Resgates\\s+"
         ));
 
         extrato.setRendimentos(extrairValorComSinal(
-                texto,
+                resumo,
                 "Rendimento Bruto no M[eê]s\\s+"
         ));
 
         extrato.setSaldoFinal(extrairValorComSinal(
-                texto,
+                resumo,
                 "Saldo Bruto\\*?\\s+"
         ));
+    }
+
+    /**
+     * Recorta a secao "Resumo da Movimentacao" do layout "Extrato Fundo de
+     * Investimento".
+     *
+     * O documento repete os mesmos rotulos — "Saldo Anterior",
+     * "Aplicações", "Resgates", "Rendimento Bruto no Mês", "Saldo Bruto*" —
+     * no resumo consolidado e, lancamento a lancamento, na "Movimentacao
+     * Detalhada". Enquanto os cinco campos eram lidos do documento inteiro,
+     * o parser acertava so porque o resumo aparece primeiro: qualquer bloco
+     * com os mesmos rotulos antes dele levava os cinco valores junto, e
+     * como todos vinham preenchidos a validacao aprovava.
+     *
+     * Vale APENAS para este layout. O layout "Extrato Mensal"
+     * (processarExtratoMensal) usa outros rotulos, nao exige "Resumo da
+     * Movimentacao" em suporta() e nao ha fixture nem amostra dele no
+     * repositorio — nao da para afirmar que tem essa secao, entao ele segue
+     * lendo do texto inteiro, como antes.
+     *
+     * Devolve null quando a secao nao existe: ai os cinco ficam null e a
+     * validacao reprova, em vez de preencher com numero de outra
+     * procedencia.
+     */
+    private String resumoDaMovimentacao(String texto) {
+        Matcher inicio = INICIO_RESUMO_MOVIMENTACAO.matcher(texto);
+
+        if (!inicio.find()) {
+            return null;
+        }
+
+        Matcher fim = FIM_RESUMO_MOVIMENTACAO.matcher(texto);
+
+        int corte = fim.find(inicio.end()) ? fim.start() : texto.length();
+
+        return texto.substring(inicio.end(), corte);
     }
 
     /**
@@ -245,11 +303,17 @@ public class CaixaParser implements DocumentoParser {
             String texto,
             String rotulo
     ) {
+        // resumoDaMovimentacao() devolve null quando o documento nao tem a
+        // secao consolidada; nesse caso o campo simplesmente nao existe.
+        if (texto == null) {
+            return null;
+        }
+
         Pattern pattern = Pattern.compile(
                 rotulo
                         + "([-\u2212]?[0-9\\.]+,[0-9]{2})"
                         + "[ \\t]*([CD]|[-\u2212])?",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -311,7 +375,7 @@ public class CaixaParser implements DocumentoParser {
 
         Pattern pattern = Pattern.compile(
                 regex,
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -498,7 +562,7 @@ public class CaixaParser implements DocumentoParser {
 
         Pattern pattern = Pattern.compile(
                 regex,
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -530,7 +594,7 @@ public class CaixaParser implements DocumentoParser {
 
         Pattern pattern = Pattern.compile(
                 "Data Fim\\s+\\d{2}/(\\d{2})/(\\d{4})",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -554,7 +618,7 @@ public class CaixaParser implements DocumentoParser {
 
         Pattern pattern = Pattern.compile(
                 regex,
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);

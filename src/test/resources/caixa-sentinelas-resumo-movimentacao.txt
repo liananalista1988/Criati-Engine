@@ -1,0 +1,107 @@
+Extrato Fundo de Investimento
+Para simples verificação
+Nome da Agência
+AGENCIA EXEMPLO, XX
+Código
+0027
+Operação
+5825
+Emissão
+05/08/2026
+Fundo
+CAIXA FI BRASIL IDKA IPCA 2A RF LP
+
+CNPJ do Fundo
+14.386.926/0001-71
+Início das Atividades do Fundo
+16/08/2012
+Rentabilidade do Fundo
+No Mês(%) No Ano(%) Nos Últimos 12
+Meses(%)
+Cota em:
+30/06/2026
+Cota em:
+31/07/2026
+1,3228   7,3742   12,7076   3,81475200   3,86521500
+Administradora
+Nome
+Caixa Econômica Federal
+
+Endereço
+Av. Paulista nº 2.300, 11º andar, Bela
+Vista,
+São Paulo/SP - CEP 01310-300
+CNPJ da
+Administradora
+00.360.305/0001-
+04
+
+Cliente
+Nome
+CLIENTE EXEMPLO PARA TESTE
+
+CPF/CNPJ
+11.222.333/0001-
+76
+Conta Corrente
+1234.000111222333-
+7
+Mês/Ano
+07/2026
+Folha
+01/01
+Análise do Perfil do Investidor
+
+Data da Avaliação
+
+Posição Preliminar do Período
+Histórico Valor em R$ Qtde de Cotas
+Saldo Anterior   111.111,11C  1.000.000,000000
+Aplicações   112.222,22  0,000000
+Resgates   113.333,33  0,000000
+Rendimento Bruto no Mês   114.444,44C
+IRRF   0,00
+IOF   0,00
+Taxa de Saída   0,00
+Saldo Bruto*   115.555,55C  1.000.000,000000
+Resgate Bruto em Trânsito*   0,00
+Resumo da Movimentação
+Histórico Valor em R$ Qtde de Cotas
+Saldo Anterior   1.000.000,00C  1.000.000,000000
+Aplicações   0,00  0,000000
+Resgates   0,00  0,000000
+Rendimento Bruto no Mês   10.000,00C
+IRRF   0,00
+IOF   0,00
+Taxa de Saída   0,00
+Saldo Bruto*   1.010.000,00C  1.000.000,000000
+Resgate Bruto em Trânsito*   0,00
+(*) Valor sujeito à tributação, conforme legislação em vigor
+Movimentação Detalhada
+Data Histórico Valor R$  Qtde de Cotas
+Saldo Anterior   221.111,11C  1.000.000,000000
+Aplicações   222.222,22  0,000000
+Resgates   223.333,33  0,000000
+Rendimento Bruto no Mês   224.444,44C
+Saldo Bruto*   225.555,55C  1.000.000,000000
+
+05/08/26, 12:07 CAIXA - Extrato de Fundos
+about:blank 1/2
+
+Dados de Tributação Rendimento Base IRRF
+  0,00   0,00
+Informações ao Cotista
+ Prestadores de serviços essenciais do Fundo, nos termos da RESOLUÇÃO CVM Nº 175
+ Administrador: CAIXA ECONÔMICA FEDERAL - 00.360.305/0001-04
+ Gestor: CAIXA DISTRIBUIDORA DE TÍTULOS E VALORES MOBILIÁRIOS S/A -
+42.040.639/0001-40
+Serviço de Atendimento ao Cotista
+SAC:
+0800 - 726
+0101
+Ouvidoria:
+0800 725
+7474
+ Acesse o site da CAIXA: www.caixa.gov.br
+05/08/26, 12:07 CAIXA - Extrato de Fundos
+about:blank 2/2
