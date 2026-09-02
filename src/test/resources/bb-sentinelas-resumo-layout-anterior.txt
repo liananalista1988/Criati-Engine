@@ -1,0 +1,56 @@
+Consultas - Investimentos Fundos - Mensal
+G0000000000000000
+05/08/2026 09:00:00
+Cliente
+Agência 1234-5
+Conta 9876-5 COTISTA EXEMPLO
+Mês/ano referência JULHO/2026
+BB RF Fluxo Sb - CNPJ: 63.197.387/0001-38
+Data Histórico Valor Valor IR Prej. Comp. Valor IOF Quantidade cotas Valor cota Saldo cotas
+SALDO ANTERIOR 111.111,11
+APLICAÇÕES (+) 112.222,22
+RESGATES (-) 113.333,33
+RENDIMENTO BRUTO (+) 114.444,44
+SALDO ATUAL = 115.555,55
+Resumo do mês
+SALDO ANTERIOR 221.111,11
+APLICAÇÕES (+) 222.222,22
+RESGATES (-) 223.333,33
+RENDIMENTO BRUTO (+) 224.444,44
+IMPOSTO DE RENDA (-) 0,00
+IOF (-) 0,00
+RENDIMENTO LÍQUIDO 224.444,44
+SALDO ATUAL = 225.555,55
+Valor da Cota
+30/06/2026 1,050203716
+31/07/2026 1,061866149
+Rentabilidade
+No mês 1,2500
+No ano 7,5000
+Últimos 12 meses 12,5000
+BB Previd CP Fluxo - CNPJ: 13.077.415/0001-05
+Data Histórico Valor Valor IR Prej. Comp. Valor IOF Quantidade cotas Valor cota Saldo cotas
+SALDO ANTERIOR 331.111,11
+APLICAÇÕES (+) 332.222,22
+RESGATES (-) 333.333,33
+RENDIMENTO BRUTO (+) 334.444,44
+SALDO ATUAL = 335.555,55
+Resumo do mês
+SALDO ANTERIOR 441.111,11
+APLICAÇÕES (+) 442.222,22
+RESGATES (-) 443.333,33
+RENDIMENTO BRUTO (+) 444.444,44
+IMPOSTO DE RENDA (-) 0,00
+IOF (-) 0,00
+RENDIMENTO LÍQUIDO 444.444,44
+SALDO ATUAL = 445.555,55
+Valor da Cota
+30/06/2026 3,633897048
+31/07/2026 3,670844164
+Rentabilidade
+No mês 1,0000
+No ano 8,0000
+Últimos 12 meses 13,0000
+Transação efetuada com sucesso por: XX000000 ATENDENTE EXEMPLO.
+Serviço de Atendimento ao Consumidor - SAC 0800 729 0722 Ouvidoria BB 0800 729 5678
+Para deficientes auditivos 0800 729 0088

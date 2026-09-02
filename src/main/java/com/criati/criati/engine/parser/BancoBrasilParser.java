@@ -13,6 +13,23 @@ import com.criati.criati.engine.model.ExtratoInvestimento;
 @Component
 public class BancoBrasilParser implements DocumentoParser {
 
+    /**
+     * Rotulo que abre a secao consolidada do fundo. Vem em caixa mista nos
+     * DOIS layouts do BB — no anterior so os itens de dentro da secao eram
+     * em caixa alta —, e com UNICODE_CASE o "e" acentuado tolera variacao.
+     */
+    private static final Pattern INICIO_RESUMO_MES = Pattern.compile(
+            "Resumo\\s+do\\s+m[eê]s",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    /**
+     * Secoes que podem vir logo depois do resumo. A primeira delas fecha a
+     * secao consolidada.
+     */
+    private static final Pattern FIM_RESUMO_MES = Pattern.compile(
+            "Valor\\s+da\\s+Cota|Rentabilidade",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
     @Override
     public boolean suporta(DocumentoContexto contexto) {
         String t = contexto.getTexto().toUpperCase();
@@ -91,19 +108,24 @@ public class BancoBrasilParser implements DocumentoParser {
             extrato.setCnpjFundo(extrair(bloco,
                     "CNPJ:\\s*(\\d{1,2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2})"));
 
-            extrato.setSaldoInicial(extrair(bloco,
+            // Os cinco consolidados saem da secao "Resumo do mes", e nao do
+            // bloco inteiro: a tabela de movimentacoes usa o mesmo
+            // vocabulario e vem ANTES do resumo. Ver resumoDoMes().
+            String resumo = resumoDoMes(bloco);
+
+            extrato.setSaldoInicial(extrair(resumo,
                     "SALDO\\s+ANTERIOR\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
-            extrato.setAplicacoes(extrair(bloco,
+            extrato.setAplicacoes(extrair(resumo,
                     "APLICAÇÕES\\s*\\(\\+\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
-            extrato.setResgates(extrair(bloco,
+            extrato.setResgates(extrair(resumo,
                     "RESGATES\\s*\\(-\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
-            extrato.setRendimentos(extrair(bloco,
+            extrato.setRendimentos(extrair(resumo,
                     "RENDIMENTO\\s+BRUTO\\s*\\([\\+\\-]\\)\\s+([\\-]?[0-9\\.]+,[0-9]{2})"));
 
-            extrato.setSaldoFinal(extrair(bloco,
+            extrato.setSaldoFinal(extrair(resumo,
                     "SALDO\\s+ATUAL\\s*=\\s*([\\-]?[0-9\\.]+,[0-9]{2})"));
 
             extrato.setRentabilidadeMes(extrair(bloco,
@@ -145,6 +167,36 @@ public class BancoBrasilParser implements DocumentoParser {
         }
 
         return blocos;
+    }
+
+    /**
+     * Recorta a secao "Resumo do mes" de dentro do bloco de UM fundo.
+     *
+     * O bloco carrega duas naturezas de dado que usam o mesmo vocabulario: a
+     * tabela de movimentacoes, lancamento a lancamento, e o resumo,
+     * consolidado. Sem este recorte, cada campo dependia de algum detalhe do
+     * proprio rotulo — "(+)", "(-)", "=", "BRUTO" — para nao casar antes na
+     * movimentacao. "Saldo anterior" nao tem detalhe nenhum: e escrito igual
+     * nos dois lugares, entao casava sempre na linha errada, e como vinha
+     * preenchido a validacao aprovava.
+     *
+     * O bloco recebido ja termina onde o proximo fundo comeca, entao o
+     * recorte nunca alcanca outro fundo. Se o fundo nao tiver a secao,
+     * devolve null e os cinco consolidados ficam null: reprovar e melhor do
+     * que preencher com numero de outra procedencia.
+     */
+    private String resumoDoMes(String bloco) {
+        Matcher inicio = INICIO_RESUMO_MES.matcher(bloco);
+
+        if (!inicio.find()) {
+            return null;
+        }
+
+        Matcher fim = FIM_RESUMO_MES.matcher(bloco);
+
+        int corte = fim.find(inicio.end()) ? fim.start() : bloco.length();
+
+        return bloco.substring(inicio.end(), corte);
     }
 
     private String extrairCompetencia(String texto) {
@@ -228,6 +280,12 @@ public class BancoBrasilParser implements DocumentoParser {
     }
 
     private String extrair(String texto, String regex) {
+        // resumoDoMes() devolve null quando o fundo nao tem a secao
+        // consolidada; nesse caso o campo simplesmente nao existe.
+        if (texto == null) {
+            return null;
+        }
+
         Pattern pattern = Pattern.compile(
                 regex,
                 Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL | Pattern.MULTILINE
