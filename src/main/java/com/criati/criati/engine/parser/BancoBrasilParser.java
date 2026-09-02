@@ -126,7 +126,7 @@ public class BancoBrasilParser implements DocumentoParser {
 
         Pattern pattern = Pattern.compile(
                 "(?m)^\\s*[^\\n]+?\\s*-\\s*CNPJ:\\s*\\d{1,2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}",
-                Pattern.CASE_INSENSITIVE
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -150,7 +150,7 @@ public class BancoBrasilParser implements DocumentoParser {
     private String extrairCompetencia(String texto) {
         Pattern pattern = Pattern.compile(
                 "M[eê]s/ano\\s+referência\\s+([A-Za-zçÇ]+)/?(20\\d{2})",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = pattern.matcher(texto);
@@ -230,7 +230,7 @@ public class BancoBrasilParser implements DocumentoParser {
     private String extrair(String texto, String regex) {
         Pattern pattern = Pattern.compile(
                 regex,
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL | Pattern.MULTILINE
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL | Pattern.MULTILINE
         );
 
         Matcher matcher = pattern.matcher(texto);
