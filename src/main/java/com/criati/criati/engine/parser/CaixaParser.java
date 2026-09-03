@@ -153,27 +153,27 @@ public class CaixaParser implements DocumentoParser {
                 "Rentabilidade Últimos 12 meses"
         ));
 
-        extrato.setSaldoInicial(extrairValorComSinal(
+        extrato.setSaldoInicial(extrairValorAssinado(
                 texto,
                 "Saldo Bruto Anterior\\s+R\\$\\s*"
         ));
 
-        extrato.setAplicacoes(extrairValorComSinal(
+        extrato.setAplicacoes(extrairValorMagnitude(
                 texto,
                 "Aplicações\\s+R\\$\\s*"
         ));
 
-        extrato.setResgates(extrairValorComSinal(
+        extrato.setResgates(extrairValorMagnitude(
                 texto,
                 "Resgates\\s+R\\$\\s*"
         ));
 
-        extrato.setRendimentos(extrairValorComSinal(
+        extrato.setRendimentos(extrairValorAssinado(
                 texto,
                 "Rendimento Bruto\\s+R\\$\\s*"
         ));
 
-        extrato.setSaldoFinal(extrairValorComSinal(
+        extrato.setSaldoFinal(extrairValorAssinado(
                 texto,
                 "Saldo Bruto Final\\s+R\\$\\s*"
         ));
@@ -209,27 +209,27 @@ public class CaixaParser implements DocumentoParser {
         // "Movimentacao Detalhada". Ver resumoDaMovimentacao().
         String resumo = resumoDaMovimentacao(texto);
 
-        extrato.setSaldoInicial(extrairValorComSinal(
+        extrato.setSaldoInicial(extrairValorAssinado(
                 resumo,
                 "Saldo Anterior\\s+"
         ));
 
-        extrato.setAplicacoes(extrairValorComSinal(
+        extrato.setAplicacoes(extrairValorMagnitude(
                 resumo,
                 "Aplicações\\s+"
         ));
 
-        extrato.setResgates(extrairValorComSinal(
+        extrato.setResgates(extrairValorMagnitude(
                 resumo,
                 "Resgates\\s+"
         ));
 
-        extrato.setRendimentos(extrairValorComSinal(
+        extrato.setRendimentos(extrairValorAssinado(
                 resumo,
                 "Rendimento Bruto no M[eê]s\\s+"
         ));
 
-        extrato.setSaldoFinal(extrairValorComSinal(
+        extrato.setSaldoFinal(extrairValorAssinado(
                 resumo,
                 "Saldo Bruto\\*?\\s+"
         ));
@@ -299,7 +299,7 @@ public class CaixaParser implements DocumentoParser {
      * atravessaria a quebra de linha e o C de "Cota em:" viraria o sinal do
      * valor da linha de cima.
      */
-    private String extrairValorComSinal(
+    private String extrairValorAssinado(
             String texto,
             String rotulo
     ) {
@@ -339,6 +339,24 @@ public class CaixaParser implements DocumentoParser {
         return negativo
                 ? "-" + valor
                 : valor;
+    }
+
+    /**
+     * Aplicacoes e resgates representam magnitudes no contrato do extrato.
+     * A natureza contabil C/D impressa pela Caixa nao muda o sinal desses
+     * campos: a formula consumidora ja soma aplicacoes e subtrai resgates.
+     */
+    private String extrairValorMagnitude(
+            String texto,
+            String rotulo
+    ) {
+        String valor = extrairValorAssinado(texto, rotulo);
+
+        if (valor == null) {
+            return null;
+        }
+
+        return valor.startsWith("-") ? valor.substring(1) : valor;
     }
 
     /**

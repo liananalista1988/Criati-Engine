@@ -153,6 +153,41 @@ class CaixaParserTest {
     }
 
     @Test
+    @DisplayName("resgate com D preserva magnitude e fecha o resumo de agosto")
+    void resgateComDebitoPermaneceMagnitudePositiva() {
+        int inicioResumo = texto.indexOf("Resumo da Movimentação")
+                + "Resumo da Movimentação".length();
+        int fimResumo = texto.indexOf("Movimentação Detalhada", inicioResumo);
+        String blocoSanitizado = """
+
+                Histórico Valor em R$ Qtde de Cotas
+                Saldo Anterior             3.903.917,27C
+                Aplicações               124.892.878,99C
+                Resgates                 128.700.000,00D
+                Rendimento Bruto no Mês      265.911,86C
+                Saldo Bruto*                 362.708,12C
+                """;
+        String resumoAgosto = texto.substring(0, inicioResumo)
+                + blocoSanitizado
+                + texto.substring(fimResumo);
+
+        ExtratoInvestimento extrato = processar(resumoAgosto);
+
+        assertEquals("3.903.917,27", extrato.getSaldoInicial());
+        assertEquals("124.892.878,99", extrato.getAplicacoes());
+        assertEquals("128.700.000,00", extrato.getResgates());
+        assertEquals("265.911,86", extrato.getRendimentos());
+        assertEquals("362.708,12", extrato.getSaldoFinal());
+
+        double fechamento = numero(extrato.getSaldoInicial())
+                + numero(extrato.getAplicacoes())
+                - numero(extrato.getResgates())
+                + numero(extrato.getRendimentos());
+
+        assertEquals(numero(extrato.getSaldoFinal()), fechamento, 0.001);
+    }
+
+    @Test
     @DisplayName("nao le o C de \"Cota em:\" da linha seguinte como sinal do valor")
     void naoConfundeLinhaSeguinteComSinal() {
         // Regressao: com \s* antes do marcador, o padrao atravessaria a quebra
@@ -204,5 +239,9 @@ class CaixaParserTest {
         String semConta = texto.replace("Conta Corrente", "XXXX");
 
         assertNull(processar(semConta).getConta());
+    }
+
+    private static double numero(String valor) {
+        return Double.parseDouble(valor.replace(".", "").replace(",", "."));
     }
 }

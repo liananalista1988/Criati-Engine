@@ -1,0 +1,20 @@
+Banco do Nordeste
+Sistema Fundos de Investimento
+Extrato Mensal
+
+Nome Data Emissão Mês/Ano
+COTISTA SANITIZADO 02/09/2026 08/2026
+
+Unidade Conta Folha
+059 - SAO LUIS CENTRO 000123456-7 1
+
+ADMINISTRADOR FIDUCIÁRIO: ADMINISTRADORA SANITIZADA DTVM CNPJ: 98.765.432/0001-10
+
+MOVIMENTAÇÕES BNB SOBERANO FIF - CNPJ: 12.345.678/0001-90
+SALDO ANTERIOR 4.494.822,130000 1,870858 8.409.172,78
+.SALDO FINAL 4.494.822,130000 1,891310 8.501.100,87
+
+Total Aplicações Total Resgates Rend. Bruto Mensal I.R. Federal
+0,00 0,00 91.928,09 0,00
+IOF s/ Resgates Rend. Tributável * Perdas a Compensar
+0,00 0,00 0,00

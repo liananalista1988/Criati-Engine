@@ -199,7 +199,7 @@ public class BnbExtratoMensalParser implements DocumentoParser {
         // "... 06/07/2026 06/2026" (data de emissao seguida da competencia).
         Pattern padrao = Pattern.compile(
                 "\\d{2}/\\d{2}/20\\d{2}\\s+(0[1-9]|1[0-2])/(20\\d{2})",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcher = padrao.matcher(texto);
@@ -210,7 +210,7 @@ public class BnbExtratoMensalParser implements DocumentoParser {
 
         Pattern padraoRotulo = Pattern.compile(
                 "M[eê]s/Ano\\s+(0[1-9]|1[0-2])/(20\\d{2})",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL
         );
 
         Matcher matcherRotulo = padraoRotulo.matcher(texto);
@@ -223,7 +223,9 @@ public class BnbExtratoMensalParser implements DocumentoParser {
     }
 
     private String extrair(String texto, String regex) {
-        Pattern pattern = Pattern.compile(regex, Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+        Pattern pattern = Pattern.compile(
+                regex,
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.DOTALL);
         Matcher matcher = pattern.matcher(texto);
 
         if (matcher.find()) {

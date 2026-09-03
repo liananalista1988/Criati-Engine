@@ -49,6 +49,14 @@ public class PdfService {
             String textoNativo = extrairTextoNativo(documento);
             String textoFinal = textoNativo;
 
+            if (ehExtratoMensalBnb(textoNativo)) {
+                String textoOrdenado = extrairTextoNativoOrdenado(documento);
+
+                if (textoOrdenado != null && !textoOrdenado.isBlank()) {
+                    textoFinal = textoOrdenado;
+                }
+            }
+
             boolean textoNativoInsuficiente =
                     textoNativo == null || textoNativo.trim().length() < MINIMO_CARACTERES_TEXTO_NATIVO;
 
@@ -91,6 +99,34 @@ public class PdfService {
         } catch (IOException e) {
             return null;
         }
+    }
+
+    /**
+     * O layout "Sistema Fundos de Investimento / Extrato Mensal" do BNB
+     * grava as colunas fora da ordem visual no fluxo interno do PDF. A
+     * segunda leitura por posicao fica restrita a esse layout para preservar
+     * a extracao historica dos documentos do BB, da Caixa e da B3.
+     */
+    private String extrairTextoNativoOrdenado(PDDocument documento) {
+        try {
+            PDFTextStripper stripper = new PDFTextStripper();
+            stripper.setSortByPosition(true);
+            return stripper.getText(documento);
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
+    private boolean ehExtratoMensalBnb(String texto) {
+        if (texto == null) {
+            return false;
+        }
+
+        String normalizado = texto.toUpperCase(java.util.Locale.ROOT);
+
+        return normalizado.contains("BANCO DO NORDESTE")
+                && normalizado.contains("SISTEMA FUNDOS DE INVESTIMENTO")
+                && normalizado.contains("EXTRATO MENSAL");
     }
 
     /**
