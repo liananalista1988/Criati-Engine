@@ -1,0 +1,53 @@
+Extrato Fundo de Investimento
+Para simples verificação
+Nome da Agência
+AGENCIA SANITIZADA
+Código
+1234
+Operação
+1234
+Emissão
+02/09/2026
+Fundo
+CX FIC TOP PRIV REF DI LP
+CNPJ do Fundo
+19.769.018/0001-80
+Início das Atividades do Fundo
+05/05/2014
+Rentabilidade do Fundo
+No Mês(%) No Ano(%) Nos Últimos 12
+Meses(%)
+Cota em:
+31/07/2026
+Cota em:
+31/08/2026
+1,1333 9,4562 14,8055 3,25092700 3,28777000
+Administradora
+Nome
+Caixa Econômica Federal
+Cliente
+Nome
+CLIENTE SANITIZADO
+CPF/CNPJ
+11.222.333/0001-00
+Conta Corrente
+1234.000111222333-
+7
+Mês/Ano
+08/2026
+Folha
+01/01
+Resumo da Movimentação
+Histórico Valor em R$ Qtde de Cotas
+Saldo Anterior 0,00 0,000000
+Aplicações 30.000.000,00C 9.154.010,738264
+Resgates 0,00 0,000000
+Rendimento Bruto no Mês 96.281,88C
+IRRF 0,00
+IOF 0,00
+Taxa de Saída 0,00
+Saldo Bruto* 30.096.281,88C 9.154.010,738264
+Resgate Bruto em Trânsito* 0,00
+Movimentação Detalhada
+Data Histórico Valor R$ Qtde de Cotas
+21 / 08 APLICACAO 30.000.000,00C 9.154.010,738264

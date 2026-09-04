@@ -463,7 +463,23 @@ public class CaixaParser implements DocumentoParser {
     }
 
     private String extrairNomeFundoCaixa(String texto) {
+        // O rotulo "Fundo" ocupa uma linha propria. Ancorar a linha evita
+        // comecar em "Extrato Fundo de Investimento" e dispensa prefixos
+        // comerciais (CAIXA, CX etc.) no nome. A proxima coluna delimita o
+        // fim do campo, inclusive quando o nome quebra em varias linhas.
         String nome = extrair(
+                texto,
+                "(?m)^[ \\t]*Fundo[ \\t]*\\n"
+                        + "\\s*(\\S.*?)\\s+"
+                        + "^[ \\t]*CNPJ[ \\t]+do[ \\t]+Fundo\\b"
+        );
+
+        if (nome != null) {
+            return limpar(nome);
+        }
+
+        // Fallbacks dos layouts anteriores, sem o campo em linha propria.
+        nome = extrair(
                 texto,
                 "Fundo\\s+"
                         + "(CAIXA\\s+.*?)"
