@@ -1,0 +1,33 @@
+Extrato Mensal
+
+
+
+
+
+Investidor: INSTITUTO FICTICIO - SÃO PAULO SP 111222333-7
+CPF/CNPJ: 12.345.678/0001-90
+Endereço: ., ., ., ., ., SÃO PAULO, BRASIL, ..
+CI CAIXA BRASIL ESPECIAL 2028 TP RF RL CNPJ: 56.209.124/0001-36
+Administrador Fundo
+CAIXA ECONOMICA FEDERAL CI CAIXA BRASIL ESPECIAL 2028 TP RF RL
+CPF/CNPJ: 00.360.305/0001-04 CPF/CNPJ: 56.209.124/0001-36
+Endereço: AV PAULISTA, 2.300, 11º ANDAR, CERQUEIRA CESAR, SÃO PAULO, SÃO PAULO, BRASIL, 01310-300.
+Telefone:
+Email:
+Descrição Valor Descrição Valor
+Rentabilidade Mês 0,58% Rentabilidade Mês Anterior 1,79%
+Rentabilidade Últimos 12 meses 7,13% Rentabilidade Ano 4,98%
+Rentabilidade Últimos 12 meses (Ajustada)¹ 13,41% Rentabilidade Ano (Ajustada)² 11,13%
+Data Início 30/09/2026 Data Fim 30/10/2026
+VL Cota Data Início R$ 1,08847039 VL Cota Data Fim R$ 1,09475690
+Saldo Bruto Anterior R$ 1.000.000,00 / 918.719,55555555 Saldo Bruto Final R$ 1.005.800,00 / 918.719,55555555
+Aplicações R$ 0,00 / 0,00000000 Rendimento Bruto R$ 5.800,00
+Resgates R$ 0,00 / 0,00000000 IRRF Provisionado R$ 0,00
+IRRF R$ 0,00 IOF Provisionado R$ 0,00
+IOF R$ 0,00 Taxa Operacional R$ 0,00
+IOF - Aplicações R$ 0,00 Saldo Líquido R$ 1.005.800,00
+Rendimento Base R$ 0,00 Resgate Bruto em Trânsito R$ 0,00
+Em cumprimento ao:Art 6°, inciso VII. Deliberação ANBIMA Nº70 de 01 de Outubro de 2015 e Art 8º, inciso VI, parágrafo: 7:
+1 - A rentabilidade foi ajustada considerando o pagamento de amortização, dividendos, juros sobre capital próprio ou outros rendimentos advindos de ativos financeiros que integrem a carteira do Fundo repassados ao cotista, cujo valor por cota é de R$ 0.06410428.
+2 - A rentabilidade foi ajustada considerando o pagamento de amortização, dividendos, juros sobre capital próprio ou outros rendimentos advindos de ativos financeiros que integrem a carteira do Fundo repassados ao cotista, cujo valor por cota é de R$ 0.06410428.
+Página 1 de  103/11/2026 - 13:32:23

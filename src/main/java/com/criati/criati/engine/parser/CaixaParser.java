@@ -248,10 +248,9 @@ public class CaixaParser implements DocumentoParser {
      * como todos vinham preenchidos a validacao aprovava.
      *
      * Vale APENAS para este layout. O layout "Extrato Mensal"
-     * (processarExtratoMensal) usa outros rotulos, nao exige "Resumo da
-     * Movimentacao" em suporta() e nao ha fixture nem amostra dele no
-     * repositorio — nao da para afirmar que tem essa secao, entao ele segue
-     * lendo do texto inteiro, como antes.
+     * (processarExtratoMensal) usa outros rotulos e nao tem essa secao: os
+     * consolidados vem num unico quadro de pagina unica e sao lidos do texto
+     * inteiro (fixture caixa-extrato-mensal.txt).
      *
      * Devolve null quando a secao nao existe: ai os cinco ficam null e a
      * validacao reprova, em vez de preencher com numero de outra
@@ -549,7 +548,7 @@ public class CaixaParser implements DocumentoParser {
      * Lê a conta do bloco:
      *
      * Conta Corrente
-     * 3703.000575271423-
+     * 3703.000111222333-
      * 7
      *
      * O PDF quebra a linha entre o hífen e o dígito verificador, então o
@@ -574,6 +573,22 @@ public class CaixaParser implements DocumentoParser {
             return removerZerosConta(conta);
         }
 
+        // Layout "Extrato Mensal": nao tem "Conta Corrente"; a conta vem no
+        // fim da linha do investidor ("Investidor: NOME - CIDADE UF
+        // 111222333-7"), ja sem o prefixo de agencia — o mesmo numero que o
+        // outro layout produz, entao a chave da posicao nao muda. O ":" evita
+        // "Análise do Perfil do Investidor" e o [^\n] impede atravessar a
+        // linha (o padrao e compilado com DOTALL).
+        conta = extrairContaComDigito(
+                texto,
+                "Investidor:[^\\n]*?(\\d{6,})\\s*-\\s*(\\d)"
+        );
+
+        if (conta != null) {
+            return removerZerosConta(conta);
+        }
+
+        // Ultimo recurso: numero da conta no nome do arquivo.
         conta = extrairContaComDigito(
                 nomeArquivo,
                 "(\\d{6,})\\s*-\\s*(\\d)"
